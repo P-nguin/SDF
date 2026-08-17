@@ -1,0 +1,13 @@
+{
+  "lldb.cargo": "/Users/danielzhao/.cargo/bin/cargo",
+  "lldb.adapterEnv": {
+    "PATH": "/Users/danielzhao/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+    "RUSTC": "/Users/danielzhao/.cargo/bin/rustc"
+  },
+  "rust-analyzer.linkedProjects": [
+    "./Cargo.toml"
+  ],
+  "rust-analyzer.cargo.allTargets": true,
+  "rust-analyzer.check.command": "check",
+  "rust-analyzer.check.allTargets": true
+}

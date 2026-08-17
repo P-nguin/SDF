@@ -1,0 +1,54 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Bevy app",
+      "program": "${workspaceFolder}/target/debug/sdf_3d",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PATH": "/Users/danielzhao/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "RUSTC": "/Users/danielzhao/.cargo/bin/rustc",
+        "RUST_BACKTRACE": "1"
+      },
+      "sourceLanguages": ["rust"],
+      "preLaunchTask": "cargo build"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Bevy app (prebuilt)",
+      "program": "${workspaceFolder}/target/debug/sdf_3d",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PATH": "/Users/danielzhao/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "RUSTC": "/Users/danielzhao/.cargo/bin/rustc",
+        "RUST_BACKTRACE": "1"
+      },
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Bevy app (CodeLLDB cargo)",
+      "cargo": {
+        "args": ["build", "--bin", "sdf_3d"],
+        "filter": {
+          "name": "sdf_3d",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PATH": "/Users/danielzhao/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "RUSTC": "/Users/danielzhao/.cargo/bin/rustc",
+        "RUST_BACKTRACE": "1"
+      },
+      "sourceLanguages": ["rust"]
+    }
+  ]
+}
