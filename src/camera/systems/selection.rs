@@ -2,21 +2,10 @@ use avian3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::player::player_set_focus::focus_on_selected_ship;
 use crate::voxel::GeneratedShipMesh;
+use crate::camera::Selected;
 
-pub struct PlayerSelectionPlugin;
-
-impl Plugin for PlayerSelectionPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Update, (select_ship_with_mouse, focus_on_selected_ship));
-    }
-}
-
-#[derive(Component, Default, Clone, Copy)]
-pub struct Selected;
-
-fn select_ship_with_mouse(
+pub fn select_ship_with_mouse(
     mut commands: Commands,
     mouse: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,

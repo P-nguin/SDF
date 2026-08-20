@@ -1,4 +1,4 @@
-use crate::player::Selected;
+use crate::camera::Selected;
 use crate::ship::{ShipRender, ShipRenderMode};
 use crate::voxel::{GeneratedShipMesh, ShipMeshKind};
 use bevy::prelude::*;

@@ -1,5 +1,4 @@
 mod camera;
-mod player;
 mod qef;
 mod ship;
 mod voxel;
@@ -12,7 +11,7 @@ use bevy::{
 };
 
 use camera::CameraPlugin;
-use player::PlayerSelectionPlugin;
+use camera::SelectionPlugin;
 use ship::{Ship, ShipBundle, ShipRender, ShipRenderMode, toggle_ship_render_mode};
 
 use crate::voxel::{
@@ -50,7 +49,7 @@ fn main() {
         })
         .add_plugins(CameraPlugin)
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PlayerSelectionPlugin)
+        .add_plugins(SelectionPlugin)
         .add_systems(Startup, setup)
         .add_systems(
             Update,
