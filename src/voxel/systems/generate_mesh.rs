@@ -1,12 +1,11 @@
-use super::sdf_chunk::{
-    GeneratedShipMesh, NeedsRemesh, SDF_GRID_SIZE, SDF_WORLD_SIZE, SDFChunks, ShipMeshKind,
-};
+use crate::voxel::components::*;
 use crate::qef::QEFData;
 use avian3d::prelude::*;
 use bevy::{
     asset::RenderAssetUsages,
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
+    camera::visibility::RenderLayers,
 };
 
 pub fn generate_chunk_mesh_system(
@@ -23,9 +22,11 @@ pub fn generate_chunk_mesh_system(
             let mesh_center = (SDF_GRID_SIZE - 1) as f32 * 0.5;
             let voxel_size = SDF_WORLD_SIZE / (SDF_GRID_SIZE - 1) as f32;
             let chunk = &layer.distances;
+
             let mut positions: Vec<[f32; 3]> = Vec::new();
             let mut normals: Vec<[f32; 3]> = Vec::new();
             let mut indices: Vec<u32> = Vec::new();
+
             let mut vertex_indices =
                 vec![-1; (SDF_GRID_SIZE * SDF_GRID_SIZE * SDF_GRID_SIZE) as usize];
 
@@ -34,10 +35,8 @@ pub fn generate_chunk_mesh_system(
                 for y in 0..(SDF_GRID_SIZE - 1) {
                     for x in 0..(SDF_GRID_SIZE - 1) {
                         let mut qef = QEFData::new();
-
                         find_intersections(x, y, z, chunk, &mut qef);
 
-                        // If we found surface intersections in this cell, solve the QEF
                         if qef.intersection_count > 0.0 {
                             let solved_vertex = qef.solve();
                             let optimal_vertex = [
@@ -53,7 +52,6 @@ pub fn generate_chunk_mesh_system(
                                 (optimal_vertex[2] - mesh_center) * voxel_size,
                             ]);
 
-                            // For normals on the final mesh, we can re-sample the normal at the optimal vertex
                             normals.push(get_normal(
                                 optimal_vertex[0],
                                 optimal_vertex[1],
@@ -81,7 +79,7 @@ pub fn generate_chunk_mesh_system(
                     for x in 1..(SDF_GRID_SIZE - 1) {
                         let d0 = get_distance(x, y, z, chunk);
 
-                        // X-axis edge (shared by cells: current, Y-1, Z-1, Y-1 Z-1)
+                        // X-axis edge
                         if (d0 <= 0.0) != (get_distance(x + 1, y, z, chunk) <= 0.0) {
                             if let (Some(v1), Some(v2), Some(v3), Some(v4)) = (
                                 get_vidx(x, y, z),
@@ -89,7 +87,6 @@ pub fn generate_chunk_mesh_system(
                                 get_vidx(x, y - 1, z - 1),
                                 get_vidx(x, y, z - 1),
                             ) {
-                                // Wind the quad based on which direction the normal faces
                                 if d0 <= 0.0 {
                                     indices.extend_from_slice(&[v1, v2, v3, v1, v3, v4]);
                                 } else {
@@ -97,7 +94,6 @@ pub fn generate_chunk_mesh_system(
                                 }
                             }
                         }
-
                         // Y-axis edge
                         if (d0 <= 0.0) != (get_distance(x, y + 1, z, chunk) <= 0.0) {
                             if let (Some(v1), Some(v2), Some(v3), Some(v4)) = (
@@ -113,7 +109,6 @@ pub fn generate_chunk_mesh_system(
                                 }
                             }
                         }
-
                         // Z-axis edge
                         if (d0 <= 0.0) != (get_distance(x, y, z + 1, chunk) <= 0.0) {
                             if let (Some(v1), Some(v2), Some(v3), Some(v4)) = (
@@ -142,18 +137,14 @@ pub fn generate_chunk_mesh_system(
             mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
             mesh.insert_indices(Indices::U32(indices.clone()));
 
-            // convert mesh positions into the vertex format Avian expects for a trimesh collider
             let collider_vertices: Vec<Vec3> = positions
                 .iter()
                 .map(|p| Vec3::new(p[0], p[1], p[2]))
                 .collect();
-
-            // group the flat indices array into groups of three
             let collider_indices: Vec<[u32; 3]> = indices
                 .chunks_exact(3)
                 .map(|chunk| [chunk[0], chunk[1], chunk[2]])
                 .collect();
-
             let collider = Collider::try_trimesh(collider_vertices, collider_indices);
 
             let visibility = match layer.kind {
@@ -161,43 +152,57 @@ pub fn generate_chunk_mesh_system(
                 ShipMeshKind::Interior => Visibility::Hidden,
             };
 
-            let child_entity = {
+            // 1. Get the single mesh pointer
+            let mesh_handle = meshes.add(mesh);
+
+            // 2. Spawn Child A: The Visual Mesh (Layer 0)
+            let visual_child = {
                 let mut child_commands = commands.spawn((
-                    Name::new(format!("{:?} Ship Mesh", layer.kind)),
+                    Name::new(format!("{:?} Ship Mesh (Visual)", layer.kind)),
                     GeneratedShipMesh {
                         ship: entity,
                         kind: layer.kind,
                     },
-                    Mesh3d(meshes.add(mesh)),
+                    Mesh3d(mesh_handle.clone()), // Use clone() to reuse the pointer
+                    MeshMaterial3d(layer.material.clone()),
                     Transform::default(),
                     visibility,
+                    RenderLayers::layer(0), // ONLY visible to Layer 0 cameras
                 ));
 
-                child_commands.insert(MeshMaterial3d(layer.material.clone()));
-
                 if layer.kind == ShipMeshKind::Exterior {
-                    match collider {
-                        Ok(collider) => {
-                            child_commands.insert(collider);
-                        }
-                        Err(error) => {
-                            warn!("Failed to build collider for exterior ship mesh: {error:?}");
-                        }
+                    if let Ok(col) = &collider {
+                        child_commands.insert(col.clone());
+                    } else if let Err(error) = &collider {
+                        warn!("Failed to build collider for exterior ship mesh: {error:?}");
                     }
                 }
-
                 child_commands.id()
             };
 
-            commands.entity(entity).add_child(child_entity);
-        }
+            // 3. Spawn Child B: The Data Mesh (Layer 1)
+            let data_child = commands.spawn((
+                Name::new(format!("{:?} Ship Mesh (Data)", layer.kind)),
+                GeneratedShipMesh {
+                    ship: entity,
+                    kind: layer.kind,
+                },
+                Mesh3d(mesh_handle), // Point to the exact same geometry!
+                MeshMaterial3d(layer.data_material.clone()),
+                Transform::default(),
+                visibility,
+                RenderLayers::layer(1), // ONLY visible to Layer 1 cameras
+            )).id();
 
+            // 4. Attach both to the parent ship
+            commands.entity(entity).add_child(visual_child);
+            commands.entity(entity).add_child(data_child);
+        }
         commands.entity(entity).remove::<NeedsRemesh>();
     }
 }
 
 fn find_intersections(x: i32, y: i32, z: i32, chunk: &[f32], qef: &mut QEFData) {
-    // Define the 8 corners of this cell
     let corners = [
         [x, y, z],
         [x + 1, y, z],
@@ -209,43 +214,30 @@ fn find_intersections(x: i32, y: i32, z: i32, chunk: &[f32], qef: &mut QEFData) 
         [x, y + 1, z + 1],
     ];
 
-    // Define the 12 edges connecting those corners (by index)
     let edges = [
-        [0, 1],
-        [1, 2],
-        [2, 3],
-        [3, 0], // Bottom face
-        [4, 5],
-        [5, 6],
-        [6, 7],
-        [7, 4], // Top face
-        [0, 4],
-        [1, 5],
-        [2, 6],
-        [3, 7], // Vertical pillars
+        [0, 1], [1, 2], [2, 3], [3, 0],
+        [4, 5], [5, 6], [6, 7], [7, 4],
+        [0, 4], [1, 5], [2, 6], [3, 7],
     ];
 
     for edges in edges.iter() {
         let c1 = corners[edges[0]];
         let c2 = corners[edges[1]];
-        // for each edge we want to see if the object partitions this space (that is find the vertex that lies on this edge where we go from object -> space)
+
         let d1 = get_distance(c1[0], c1[1], c1[2], chunk);
         let d2 = get_distance(c2[0], c2[1], c2[2], chunk);
 
-        // if d1 and d2 are different signs then they are on different sides of the mesh
         if (d1 <= 0.0) != (d2 <= 0.0) {
             let t = d1 / (d1 - d2);
             let px = c1[0] as f32 + t * (c2[0] - c1[0]) as f32;
             let py = c1[1] as f32 + t * (c2[1] - c1[1]) as f32;
             let pz = c1[2] as f32 + t * (c2[2] - c1[2]) as f32;
             let normal = get_normal(px, py, pz, chunk);
-
             qef.add_intersection([px, py, pz], normal);
         }
     }
 }
 
-// gets the sdf distance at (x, y, z)
 fn get_distance(x: i32, y: i32, z: i32, chunk: &[f32]) -> f32 {
     if x < 0 || y < 0 || z < 0 || x >= SDF_GRID_SIZE || y >= SDF_GRID_SIZE || z >= SDF_GRID_SIZE {
         return 1.0;
@@ -253,10 +245,7 @@ fn get_distance(x: i32, y: i32, z: i32, chunk: &[f32]) -> f32 {
     chunk[(z * SDF_GRID_SIZE * SDF_GRID_SIZE + y * SDF_GRID_SIZE + x) as usize]
 }
 
-// estimate the normal using Central Differences
 fn get_normal(x: f32, y: f32, z: f32, chunk: &[f32]) -> [f32; 3] {
-    // In a real implementation, you would interpolate the distance field at exact float coordinates.
-    // For simplicity, we sample the nearest integers.
     let ix = x.round() as i32;
     let iy = y.round() as i32;
     let iz = z.round() as i32;

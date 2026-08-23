@@ -12,6 +12,8 @@ pub struct SDFLayer {
     pub kind: ShipMeshKind,
     pub distances: Vec<f32>,
     pub material: Handle<StandardMaterial>,
+    pub data_material: Handle<StandardMaterial>,
+    
     // pub chunk_index: IVec3,
 }
 

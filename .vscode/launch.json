@@ -11,7 +11,8 @@
       "env": {
         "PATH": "/Users/danielzhao/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
         "RUSTC": "/Users/danielzhao/.cargo/bin/rustc",
-        "RUST_BACKTRACE": "1"
+        "RUST_BACKTRACE": "1",
+        "CARGO_MANIFEST_DIR": "${workspaceFolder}"
       },
       "sourceLanguages": ["rust"],
       "preLaunchTask": "cargo build"
@@ -26,7 +27,8 @@
       "env": {
         "PATH": "/Users/danielzhao/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
         "RUSTC": "/Users/danielzhao/.cargo/bin/rustc",
-        "RUST_BACKTRACE": "1"
+        "RUST_BACKTRACE": "1",
+        "CARGO_MANIFEST_DIR": "${workspaceFolder}"
       },
       "sourceLanguages": ["rust"]
     },
@@ -46,7 +48,8 @@
       "env": {
         "PATH": "/Users/danielzhao/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
         "RUSTC": "/Users/danielzhao/.cargo/bin/rustc",
-        "RUST_BACKTRACE": "1"
+        "RUST_BACKTRACE": "1",
+        "CARGO_MANIFEST_DIR": "${workspaceFolder}"
       },
       "sourceLanguages": ["rust"]
     }

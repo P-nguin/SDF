@@ -204,3 +204,43 @@ flowchart TD
     class UIEgui ui
     ```
 ````
+
+```mermaid
+
+graph TD
+    subgraph 1. CPU: Data Definition
+        SDF[Raw SDF Distances] --> GenMesh[generate_chunk_mesh_system]
+        MatV[PBR Material] --> GenMesh
+        MatD[Unlit RGB Material] --> GenMesh
+    end
+
+    subgraph 2. CPU: ECS Hierarchy
+        GenMesh -->|Compiles 1x| M[Handle<Mesh>]
+        M --> Child0
+        M --> Child1
+
+        Child0[Visual Entity<br/>RenderLayers 0]
+        Child1[Data Entity<br/>RenderLayers 1]
+    end
+
+    subgraph 3. Camera System
+        CamState[CameraRenderState]
+        CamState -->|If VOXEL| C0[Camera<br/>Layer 0]
+        CamState -->|If ASCII| C1[Camera<br/>Layer 1]
+    end
+
+    subgraph 4. GPU: Render Pipeline
+        C0 --> R0[PBR Rendering Pipeline]
+        R0 --> OutV[Beautiful 3D Output]
+
+        C1 --> R1[Flat Data Rendering Pipeline]
+        R1 --> T1[Red/Green Texture buffer]
+        T1 --> WGSL[Custom WGSL Shader]
+        Atlas[ascii_atlas.png] --> WGSL
+        WGSL --> OutA[ASCII Terminal Output]
+    end
+
+    Child0 -.-> C0
+    Child1 -.-> C1
+
+```

@@ -2,8 +2,10 @@ mod camera;
 mod qef;
 mod ship;
 mod voxel;
+mod ascii;
 
 use avian3d::prelude::{GravityScale, PhysicsPlugins, RigidBody};
+
 use bevy::prelude::*;
 use bevy::{
     pbr::wireframe::{WireframeConfig, WireframePlugin},
@@ -12,12 +14,15 @@ use bevy::{
 
 use camera::CameraPlugin;
 use camera::SelectionPlugin;
-use ship::{Ship, ShipBundle, ShipRender, ShipRenderMode, toggle_ship_render_mode};
+
+use ship::{ShipPlugin, ShipTag, ShipBundle, ShipRender, ShipRenderMode};
 
 use crate::voxel::{
     NeedsRemesh, SDF_GRID_SIZE, SDF_WORLD_SIZE, SDFChunks, SDFLayer, ShipMeshKind,
     generate_chunk_mesh_system,
 };
+
+use ascii::AsciiRenderPlugin;
 
 fn main() {
     App::new()
@@ -33,7 +38,6 @@ fn main() {
                 })
                 .set(RenderPlugin {
                     render_creation: WgpuSettings {
-                        // Required for native wireframe rendering
                         features: WgpuFeatures::POLYGON_MODE_LINE,
                         ..default()
                     }
@@ -43,19 +47,20 @@ fn main() {
         )
         .add_plugins(WireframePlugin::default())
         .insert_resource(WireframeConfig {
-            global: false,                                    // Start with wireframes disabled
-            default_color: Color::srgb(0.0, 1.0, 0.0).into(), // Bright green wireframes
+            global: false,
+            default_color: Color::srgb(0.0, 1.0, 0.0).into(),
             ..default()
         })
         .add_plugins(CameraPlugin)
         .add_plugins(PhysicsPlugins::default())
         .add_plugins(SelectionPlugin)
+        .add_plugins(ShipPlugin)
+        .add_plugins(AsciiRenderPlugin)
         .add_systems(Startup, setup)
         .add_systems(
             Update,
             (
                 generate_chunk_mesh_system,
-                toggle_ship_render_mode,
                 toggle_wireframe_debug,
             ),
         )
@@ -109,9 +114,9 @@ fn spawn_placeholder_ship(
     let mut exterior_distances = vec![1.0; volume];
     let mut interior_distances = vec![1.0; volume];
 
-    // temp sdf ship creation
     let voxel_size = SDF_WORLD_SIZE / (size - 1) as f32;
     let grid_center = (size - 1) as f32 * 0.5;
+
     let center = Vec3::ZERO;
     let room_volumes = [
         (Vec3::new(-3.5, 0.0, 0.0), Vec3::new(2.0, 1.5, 3.0)),
@@ -126,27 +131,19 @@ fn spawn_placeholder_ship(
                 let grid_pos = Vec3::new(x as f32, y as f32, z as f32);
                 let pos = (grid_pos - Vec3::splat(grid_center)) * voxel_size;
 
-                // 1. Define the solid outer hull of the ship.
                 let hull = sdf_box(pos, Vec3::new(6.0, 2.0, 4.0));
 
-                // 2. Define room volumes as "air brushes" and combine them into one interior.
                 let mut interior_air = f32::INFINITY;
-
                 for (room_center, room_half_extents) in room_volumes.iter() {
                     let room_dist = sdf_box(pos - *room_center, *room_half_extents);
                     interior_air = op_union(interior_air, room_dist);
                 }
 
-                // 3. Carve the air out of the solid hull
                 let final_exterior = op_subtract(hull, interior_air);
-
-                // 4. For the interior mesh, we want the exact opposite.
-                // We want to render the "walls" of the air volume.
                 let final_interior = interior_air;
 
                 let index = (z * size * size) + (y * size) + x;
                 let index = index as usize;
-
                 exterior_distances[index] = final_exterior;
                 interior_distances[index] = final_interior;
             }
@@ -156,9 +153,22 @@ fn spawn_placeholder_ship(
     let exterior_material = materials.add(exterior_color);
     let interior_material = materials.add(Color::srgb(0.9, 0.45, 0.15));
 
+    // --- NEW: Unlit Data Materials ---
+    let exterior_data_mat = materials.add(StandardMaterial {
+        base_color: Color::srgb(1.0, 0.0, 0.0), // Red for Hull
+        unlit: true,
+        ..default()
+    });
+
+    let interior_data_mat = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.0, 1.0, 0.0), // Green for Interior
+        unlit: true,
+        ..default()
+    });
+
     commands.spawn((
         ShipBundle {
-            marker: Ship,
+            ship_tag: ShipTag,
             transform,
             rigidbody: RigidBody::Dynamic,
             chunks: SDFChunks {
@@ -167,11 +177,13 @@ fn spawn_placeholder_ship(
                         kind: ShipMeshKind::Exterior,
                         distances: exterior_distances,
                         material: exterior_material,
+                        data_material: exterior_data_mat, // Hooked up here
                     },
                     SDFLayer {
                         kind: ShipMeshKind::Interior,
                         distances: interior_distances,
                         material: interior_material,
+                        data_material: interior_data_mat, // Hooked up here
                     },
                 ],
             },
@@ -195,19 +207,15 @@ fn toggle_wireframe_debug(
     }
 }
 
-// --- SDF Primitive Shapes ---
 fn sdf_box(p: Vec3, extents: Vec3) -> f32 {
     let q = p.abs() - extents;
     q.max(Vec3::ZERO).length() + q.x.max(q.y.max(q.z)).min(0.0)
 }
 
-// --- CSG Boolean Operations ---
-/// Merges two shapes together
 fn op_union(d1: f32, d2: f32) -> f32 {
     d1.min(d2)
 }
 
-/// Carves shape 2 out of shape 1
 fn op_subtract(d1: f32, d2: f32) -> f32 {
     d1.max(-d2)
 }

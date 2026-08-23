@@ -5,7 +5,7 @@ use crate::voxel::{NeedsRemesh, SDFChunks};
 
 // marker
 #[derive(Component)]
-pub struct Ship;
+pub struct ShipTag;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ShipRenderMode {
@@ -22,7 +22,7 @@ pub struct ShipRender {
 // actual ship struct
 #[derive(Bundle)]
 pub struct ShipBundle {
-    pub marker: Ship,
+    pub ship_tag: ShipTag,
     pub transform: Transform,
     pub rigidbody: RigidBody,
 

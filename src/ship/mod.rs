@@ -1,5 +1,7 @@
-mod render;
-mod spaceship;
+mod components;
+mod system;
+mod plugin;
 
-pub use render::toggle_ship_render_mode;
-pub use spaceship::{Ship, ShipBundle, ShipRender, ShipRenderMode};
+pub use system::*;
+pub use components::*;
+pub use plugin::*;
