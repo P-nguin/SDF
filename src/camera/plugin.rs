@@ -11,7 +11,6 @@ use crate::camera::systems::sync_camera_transform;
 use crate::camera::systems::select_ship_with_mouse;
 use crate::camera::systems::focus_on_selected_ship;
 
-use crate::ascii::AsciiSettings;
 
 pub struct CameraPlugin;
 
@@ -24,9 +23,7 @@ impl Plugin for CameraPlugin {
     }
 }
 
-fn spawn_camera(mut commands: Commands, asset_server: Res<AssetServer>) { 
-    
-    let font_handle = asset_server.load("textures/font.png");
+fn spawn_camera(mut commands: Commands) { 
 
     commands.spawn((
         Camera3d::default(),
@@ -35,8 +32,6 @@ fn spawn_camera(mut commands: Commands, asset_server: Res<AssetServer>) {
         RenderLayers::layer(0),
         DepthPrepass,
         Msaa::Sample4, 
-        // <-- NEW: Pass the font handle into the settings
-        AsciiSettings { enabled: false, font_handle }, 
         CameraStateTag,
         CameraState {
             render_state: CameraRenderState::VOXEL,

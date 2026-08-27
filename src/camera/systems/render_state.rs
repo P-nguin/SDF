@@ -1,17 +1,16 @@
 use bevy::prelude::*;
 use bevy::camera::ClearColorConfig;
 use crate::camera::components::{CameraStateTag, CameraState, CameraRenderState};
-use crate::ascii::AsciiSettings;
-
+use bevy::camera::visibility::RenderLayers;
 pub fn determine_render_state(
     mut camera_state_query: Query<(
         &mut CameraState, 
-        &mut AsciiSettings,
+        &mut RenderLayers,
         &mut Msaa,
         &mut Camera
     ), With<CameraStateTag>>
 ) {
-    let Ok((mut camera_state, mut ascii_settings, mut msaa, mut camera)) = camera_state_query.single_mut() else {
+    let Ok((mut camera_state, mut render_layers, mut msaa, mut camera)) = camera_state_query.single_mut() else {
         return;
     };
 
@@ -25,11 +24,11 @@ pub fn determine_render_state(
         camera_state.render_state = target_state;
 
         if target_state == CameraRenderState::ASCII {
-            ascii_settings.enabled = true;
+            *render_layers = RenderLayers::layer(1);
             *msaa = Msaa::Off;
             camera.clear_color = ClearColorConfig::Custom(Color::BLACK);
         } else {
-            ascii_settings.enabled = false;
+            *render_layers = RenderLayers::layer(0);
             *msaa = Msaa::Sample4;
             camera.clear_color = ClearColorConfig::Default;
         }
