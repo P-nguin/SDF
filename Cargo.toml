@@ -8,6 +8,7 @@ bevy = "0.19"
 avian3d = "0.7"
 nalgebra = "*"
 bytemuck = "1.25.2"
+wgpu = "30.0.1"
 
 [profile.dev]
 opt-level = 0

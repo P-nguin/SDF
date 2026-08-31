@@ -1,15 +1,24 @@
 // ---------------------------------------------------------
-// 1. MEMORY BINDINGS
+// 1. DATA STRUCTURES
+// ---------------------------------------------------------
+struct DataRanges {
+    first_vertex: u32,
+    first_index: u32,
+}
+
+// ---------------------------------------------------------
+// 2. MEMORY BINDINGS
 // ---------------------------------------------------------
 @group(0) @binding(0) var<storage, read> sdf_data: array<f32>;
-@group(0) @binding(1) var<storage, read_write> vertices: array<f32>; 
-@group(0) @binding(2) var<storage, read_write> indices: array<u32>;
-@group(0) @binding(3) var<storage, read_write> index_counter: atomic<u32>;
+@group(0) @binding(1) var<uniform> ranges: DataRanges;
+@group(0) @binding(2) var<storage, read_write> index_counter: atomic<u32>;
+@group(0) @binding(3) var<storage, read_write> vertices: array<f32>; 
+@group(0) @binding(4) var<storage, read_write> indices: array<u32>;
 
 const GRID_SIZE: u32 = 64u;
 
 // ---------------------------------------------------------
-// 2. HELPER FUNCTIONS
+// 3. HELPER FUNCTIONS
 // ---------------------------------------------------------
 fn get_voxel_index(x: u32, y: u32, z: u32) -> u32 {
     return (z * GRID_SIZE * GRID_SIZE) + (y * GRID_SIZE) + x;
@@ -22,7 +31,6 @@ fn get_distance(x: u32, y: u32, z: u32) -> f32 {
     return sdf_data[get_voxel_index(x, y, z)];
 }
 
-// Safe central difference normal calculation
 fn get_normal(x: f32, y: f32, z: f32) -> vec3<f32> {
     let ix = u32(clamp(round(x), 1.0, f32(GRID_SIZE - 2u)));
     let iy = u32(clamp(round(y), 1.0, f32(GRID_SIZE - 2u)));
@@ -58,7 +66,7 @@ fn invert_mat3(m: mat3x3<f32>) -> mat3x3<f32> {
 }
 
 // ---------------------------------------------------------
-// 3. PASS ONE: SOLVE VERTICES
+// 4. PASS ONE: SOLVE VERTICES
 // ---------------------------------------------------------
 @compute @workgroup_size(8, 8, 8)
 fn solve_qef(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -117,41 +125,55 @@ fn solve_qef(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
     }
 
-    let voxel_idx = get_voxel_index(x, y, z);
-    let v_idx = voxel_idx * 3u; 
+    let local_v_idx = get_voxel_index(x, y, z);
     
+    // Base index into the flat f32 array (8 floats per vertex)
+    // ranges.first_vertex is multiplied by 8 on the CPU before passing to the shader
+    let v_base = ranges.first_vertex + (local_v_idx * 8u);
+
     if (intersection_count > 0.0) {
         let mass_center = mass_point / intersection_count;
         let pseudo_inv = invert_mat3(ata);
-        
         let correction = pseudo_inv * (atb - (ata * mass_center));
         var optimal_vertex = mass_center + correction;
         
         let cell_min = vec3<f32>(f32(x), f32(y), f32(z));
         let cell_max = vec3<f32>(f32(x) + 1.0, f32(y) + 1.0, f32(z) + 1.0);
         
-        // Safety check: Fall back to mass center if SVD diverges or produces NaNs
         if (any(optimal_vertex < cell_min) || any(optimal_vertex > cell_max) || dot(correction, correction) > 2.0) {
             optimal_vertex = mass_center;
         }
 
+        let final_normal = get_normal(optimal_vertex.x, optimal_vertex.y, optimal_vertex.z);
+
         let mesh_center = f32(GRID_SIZE - 1u) * 0.5;
         let voxel_size = 16.0 / f32(GRID_SIZE - 1u);
-        
         optimal_vertex = (optimal_vertex - vec3<f32>(mesh_center)) * voxel_size;
 
-        vertices[v_idx] = optimal_vertex.x;
-        vertices[v_idx + 1u] = optimal_vertex.y;
-        vertices[v_idx + 2u] = optimal_vertex.z;
+        // Position (Offset 0, 1, 2)
+        vertices[v_base + 0u] = optimal_vertex.x;
+        vertices[v_base + 1u] = optimal_vertex.y;
+        vertices[v_base + 2u] = optimal_vertex.z;
+        
+        // Normal (Offset 3, 4, 5)
+        vertices[v_base + 3u] = final_normal.x;
+        vertices[v_base + 4u] = final_normal.y;
+        vertices[v_base + 5u] = final_normal.z;
+        
+        // UVs (Offset 6, 7)
+        vertices[v_base + 6u] = optimal_vertex.x; 
+        vertices[v_base + 7u] = optimal_vertex.z; 
+
     } else {
-        vertices[v_idx] = 0.0;
-        vertices[v_idx + 1u] = 0.0;
-        vertices[v_idx + 2u] = 0.0;
+        // Explicitly write degenerate zeros to all 8 float slots
+        for (var i = 0u; i < 8u; i = i + 1u) {
+            vertices[v_base + i] = 0.0;
+        }
     }
 }
 
 // ---------------------------------------------------------
-// 4. PASS TWO: GENERATE QUADS (INDICES)
+// 5. PASS TWO: GENERATE QUADS (INDICES)
 // ---------------------------------------------------------
 @compute @workgroup_size(8, 8, 8)
 fn generate_quads(@builtin(global_invocation_id) global_id: vec3<u32>) {
@@ -168,19 +190,21 @@ fn generate_quads(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // X-AXIS EDGE
     let d_x = get_distance(x + 1u, y, z);
     if ((d0 <= 0.0) != (d_x <= 0.0)) {
+        // Indices refer to local vertex offsets. Bevy's pipeline applies the `base_vertex` offset automatically.
         let v1 = get_voxel_index(x, y, z);
         let v2 = get_voxel_index(x, y - 1u, z);
         let v3 = get_voxel_index(x, y - 1u, z - 1u);
         let v4 = get_voxel_index(x, y, z - 1u);
-
-        let idx = atomicAdd(&index_counter, 6u);
+        
+        let local_i_idx = atomicAdd(&index_counter, 6u);
+        let global_i_idx = ranges.first_index + local_i_idx;
         
         if (d0 <= 0.0) {
-            indices[idx] = v1; indices[idx+1] = v2; indices[idx+2] = v3;
-            indices[idx+3] = v1; indices[idx+4] = v3; indices[idx+5] = v4;
+            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v2; indices[global_i_idx+2] = v3;
+            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v4;
         } else {
-            indices[idx] = v1; indices[idx+1] = v4; indices[idx+2] = v3;
-            indices[idx+3] = v1; indices[idx+4] = v3; indices[idx+5] = v2;
+            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v4; indices[global_i_idx+2] = v3;
+            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v2;
         }
     }
 
@@ -192,14 +216,15 @@ fn generate_quads(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let v3 = get_voxel_index(x - 1u, y, z - 1u);
         let v4 = get_voxel_index(x - 1u, y, z);
         
-        let idx = atomicAdd(&index_counter, 6u);
+        let local_i_idx = atomicAdd(&index_counter, 6u);
+        let global_i_idx = ranges.first_index + local_i_idx;
         
         if (d0 <= 0.0) {
-            indices[idx] = v1; indices[idx+1] = v2; indices[idx+2] = v3;
-            indices[idx+3] = v1; indices[idx+4] = v3; indices[idx+5] = v4;
+            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v2; indices[global_i_idx+2] = v3;
+            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v4;
         } else {
-            indices[idx] = v1; indices[idx+1] = v4; indices[idx+2] = v3;
-            indices[idx+3] = v1; indices[idx+4] = v3; indices[idx+5] = v2;
+            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v4; indices[global_i_idx+2] = v3;
+            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v2;
         }
     }
 
@@ -210,15 +235,16 @@ fn generate_quads(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let v2 = get_voxel_index(x - 1u, y, z);
         let v3 = get_voxel_index(x - 1u, y - 1u, z);
         let v4 = get_voxel_index(x, y - 1u, z);
-
-        let idx = atomicAdd(&index_counter, 6u);
+        
+        let local_i_idx = atomicAdd(&index_counter, 6u);
+        let global_i_idx = ranges.first_index + local_i_idx;
         
         if (d0 <= 0.0) {
-            indices[idx] = v1; indices[idx+1] = v2; indices[idx+2] = v3;
-            indices[idx+3] = v1; indices[idx+4] = v3; indices[idx+5] = v4;
+            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v2; indices[global_i_idx+2] = v3;
+            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v4;
         } else {
-            indices[idx] = v1; indices[idx+1] = v4; indices[idx+2] = v3;
-            indices[idx+3] = v1; indices[idx+4] = v3; indices[idx+5] = v2;
+            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v4; indices[global_i_idx+2] = v3;
+            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v2;
         }
     }
 }
