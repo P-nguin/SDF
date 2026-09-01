@@ -175,6 +175,8 @@ fn solve_qef(@builtin(global_invocation_id) global_id: vec3<u32>) {
 // ---------------------------------------------------------
 // 5. PASS TWO: GENERATE QUADS (INDICES)
 // ---------------------------------------------------------
+// to look into
+// but we switched from atomic counter to a spare packing this helps remove stale vertices now that we have destruction
 @compute @workgroup_size(8, 8, 8)
 fn generate_quads(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let x = global_id.x;
@@ -186,26 +188,29 @@ fn generate_quads(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     let d0 = get_distance(x, y, z);
+    
+    // Calculate the fixed memory slot for this specific voxel (18 indices max per voxel)
+    let base_i_idx = ranges.first_index + (get_voxel_index(x, y, z) * 18u);
 
     // X-AXIS EDGE
     let d_x = get_distance(x + 1u, y, z);
     if ((d0 <= 0.0) != (d_x <= 0.0)) {
-        // Indices refer to local vertex offsets. Bevy's pipeline applies the `base_vertex` offset automatically.
         let v1 = get_voxel_index(x, y, z);
         let v2 = get_voxel_index(x, y - 1u, z);
         let v3 = get_voxel_index(x, y - 1u, z - 1u);
         let v4 = get_voxel_index(x, y, z - 1u);
         
-        let local_i_idx = atomicAdd(&index_counter, 6u);
-        let global_i_idx = ranges.first_index + local_i_idx;
-        
         if (d0 <= 0.0) {
-            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v2; indices[global_i_idx+2] = v3;
-            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v4;
+            indices[base_i_idx + 0u] = v1; indices[base_i_idx + 1u] = v2; indices[base_i_idx + 2u] = v3;
+            indices[base_i_idx + 3u] = v1; indices[base_i_idx + 4u] = v3; indices[base_i_idx + 5u] = v4;
         } else {
-            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v4; indices[global_i_idx+2] = v3;
-            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v2;
+            indices[base_i_idx + 0u] = v1; indices[base_i_idx + 1u] = v4; indices[base_i_idx + 2u] = v3;
+            indices[base_i_idx + 3u] = v1; indices[base_i_idx + 4u] = v3; indices[base_i_idx + 5u] = v2;
         }
+    } else {
+        // Overwrite stale indices with degenerate (0, 0, 0) triangles
+        indices[base_i_idx + 0u] = 0u; indices[base_i_idx + 1u] = 0u; indices[base_i_idx + 2u] = 0u;
+        indices[base_i_idx + 3u] = 0u; indices[base_i_idx + 4u] = 0u; indices[base_i_idx + 5u] = 0u;
     }
 
     // Y-AXIS EDGE
@@ -216,16 +221,16 @@ fn generate_quads(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let v3 = get_voxel_index(x - 1u, y, z - 1u);
         let v4 = get_voxel_index(x - 1u, y, z);
         
-        let local_i_idx = atomicAdd(&index_counter, 6u);
-        let global_i_idx = ranges.first_index + local_i_idx;
-        
         if (d0 <= 0.0) {
-            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v2; indices[global_i_idx+2] = v3;
-            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v4;
+            indices[base_i_idx + 6u] = v1; indices[base_i_idx + 7u] = v2; indices[base_i_idx + 8u] = v3;
+            indices[base_i_idx + 9u] = v1; indices[base_i_idx + 10u] = v3; indices[base_i_idx + 11u] = v4;
         } else {
-            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v4; indices[global_i_idx+2] = v3;
-            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v2;
+            indices[base_i_idx + 6u] = v1; indices[base_i_idx + 7u] = v4; indices[base_i_idx + 8u] = v3;
+            indices[base_i_idx + 9u] = v1; indices[base_i_idx + 10u] = v3; indices[base_i_idx + 11u] = v2;
         }
+    } else {
+        indices[base_i_idx + 6u] = 0u; indices[base_i_idx + 7u] = 0u; indices[base_i_idx + 8u] = 0u;
+        indices[base_i_idx + 9u] = 0u; indices[base_i_idx + 10u] = 0u; indices[base_i_idx + 11u] = 0u;
     }
 
     // Z-AXIS EDGE
@@ -236,15 +241,15 @@ fn generate_quads(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let v3 = get_voxel_index(x - 1u, y - 1u, z);
         let v4 = get_voxel_index(x, y - 1u, z);
         
-        let local_i_idx = atomicAdd(&index_counter, 6u);
-        let global_i_idx = ranges.first_index + local_i_idx;
-        
         if (d0 <= 0.0) {
-            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v2; indices[global_i_idx+2] = v3;
-            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v4;
+            indices[base_i_idx + 12u] = v1; indices[base_i_idx + 13u] = v2; indices[base_i_idx + 14u] = v3;
+            indices[base_i_idx + 15u] = v1; indices[base_i_idx + 16u] = v3; indices[base_i_idx + 17u] = v4;
         } else {
-            indices[global_i_idx]   = v1; indices[global_i_idx+1] = v4; indices[global_i_idx+2] = v3;
-            indices[global_i_idx+3] = v1; indices[global_i_idx+4] = v3; indices[global_i_idx+5] = v2;
+            indices[base_i_idx + 12u] = v1; indices[base_i_idx + 13u] = v4; indices[base_i_idx + 14u] = v3;
+            indices[base_i_idx + 15u] = v1; indices[base_i_idx + 16u] = v3; indices[base_i_idx + 17u] = v2;
         }
+    } else {
+        indices[base_i_idx + 12u] = 0u; indices[base_i_idx + 13u] = 0u; indices[base_i_idx + 14u] = 0u;
+        indices[base_i_idx + 15u] = 0u; indices[base_i_idx + 16u] = 0u; indices[base_i_idx + 17u] = 0u;
     }
 }

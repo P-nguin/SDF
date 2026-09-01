@@ -14,8 +14,8 @@ use camera::CameraPlugin;
 use camera::SelectionPlugin;
 use ship::{ShipTag, ShipBundle};
 use crate::voxel::{
-    GenerateMesh, SDF_GRID_SIZE, SDF_WORLD_SIZE, SDFChunk,
-    generate_chunk_mesh_system, VoxelComputePlugin,
+    GenerateMesh, SDF_GRID_SIZE, SDF_WORLD_SIZE, SDFChunk, generate_chunk_mesh_system, 
+    VoxelComputePlugin, VoxelDestructionPlugin,
 };
 
 fn main() {
@@ -49,6 +49,7 @@ fn main() {
     .add_plugins(PhysicsPlugins::default())
     .add_plugins(SelectionPlugin)
     .add_plugins(VoxelComputePlugin)
+    .add_plugins(VoxelDestructionPlugin)
     .add_systems(Startup, setup)
     .add_systems(
         Update,

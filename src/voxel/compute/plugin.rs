@@ -2,9 +2,7 @@ use bevy::prelude::*;
 use bevy::render::{RenderApp, Render, RenderSystems};
 use bevy::render::extract_component::ExtractComponentPlugin;
 
-use crate::voxel::compute::buffers::DualContouringPipeline;
-// Removed ComputeDispatched
-use crate::voxel::compute::dispatch::{dispatch_dual_contouring, ExtractedSDF};
+use crate::voxel::*;
 
 pub struct VoxelComputePlugin;
 
@@ -23,5 +21,14 @@ impl Plugin for VoxelComputePlugin {
     fn finish(&self, app: &mut App) {
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else { return; };
         render_app.init_resource::<DualContouringPipeline>();
+    }
+}
+
+pub struct VoxelDestructionPlugin;
+
+impl Plugin for VoxelDestructionPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<DestructionMode>()
+            .add_systems(Update, (toggle_destruction_mode, handle_voxel_destruction));
     }
 }
