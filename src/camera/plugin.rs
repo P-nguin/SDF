@@ -31,11 +31,11 @@ fn spawn_camera(mut commands: Commands) {
         Transform::default(),
         RenderLayers::layer(0),
         DepthPrepass,
-        Msaa::Sample4, 
+        Msaa::Off, 
         CameraStateTag,
         CameraState {
             render_state: CameraRenderState::VOXEL,
-            control_state: CameraControlState::MOVE,
+            control_state: CameraControlState::COMMAND,
             zoom: 30.0,
             zoom_threshold: 60.0,
             focus_point: Vec3::ZERO,

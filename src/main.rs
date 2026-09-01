@@ -2,6 +2,7 @@ mod camera;
 mod qef;
 mod ship;
 mod voxel;
+mod ui;
 
 use avian3d::prelude::{GravityScale, PhysicsPlugins, RigidBody};
 use bevy::prelude::*;
@@ -17,6 +18,7 @@ use crate::voxel::{
     GenerateMesh, SDF_GRID_SIZE, SDF_WORLD_SIZE, SDFChunk, generate_chunk_mesh_system, 
     VoxelComputePlugin, VoxelDestructionPlugin,
 };
+use ui::CommandUIPlugin;
 
 fn main() {
     let mut app = App::new();
@@ -39,6 +41,7 @@ fn main() {
                 ..default()
             }),
     )
+    .add_plugins(bevy_egui::EguiPlugin::default())
     .add_plugins(WireframePlugin::default())
     .insert_resource(WireframeConfig {
         global: false,
@@ -50,6 +53,7 @@ fn main() {
     .add_plugins(SelectionPlugin)
     .add_plugins(VoxelComputePlugin)
     .add_plugins(VoxelDestructionPlugin)
+    .add_plugins(CommandUIPlugin)
     .add_systems(Startup, setup)
     .add_systems(
         Update,

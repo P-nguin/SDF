@@ -29,7 +29,7 @@ pub fn determine_render_state(
             camera.clear_color = ClearColorConfig::Custom(Color::BLACK);
         } else {
             *render_layers = RenderLayers::layer(0);
-            *msaa = Msaa::Sample4;
+            *msaa = Msaa::Off;
             camera.clear_color = ClearColorConfig::Default;
         }
     }

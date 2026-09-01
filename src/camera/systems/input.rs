@@ -9,10 +9,23 @@ pub fn handle_input(
     mut camera_state_query: Query<&mut CameraState, With<CameraStateTag>>,
     transforms: Query<&Transform, Without<CameraStateTag>>, 
 ) {
+    // 1. Safely extract the camera state
     let Ok(mut camera_state) = camera_state_query.single_mut() else {
         return;
     };
 
+    // 2. Toggle Command Mode with the Escape Key
+    if keyboard.just_pressed(KeyCode::Escape) {
+        if camera_state.control_state == CameraControlState::MOVE {
+            camera_state.control_state = CameraControlState::COMMAND;
+            info!("Entered COMMAND mode.");
+        } else {
+            camera_state.control_state = CameraControlState::MOVE;
+            info!("Entered MOVE mode.");
+        }
+    }
+
+    // 3. Only allow WASD movement if we are NOT in command mode
     if camera_state.control_state == CameraControlState::MOVE {
         let speed = 20.0 * time.delta_secs();
         let mut movement = Vec3::ZERO;
