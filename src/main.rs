@@ -10,6 +10,7 @@ use bevy::{
     pbr::wireframe::{WireframeConfig, WireframePlugin},
     render::{RenderPlugin, render_resource::WgpuFeatures, settings::WgpuSettings},
 };
+// use bevy::gltf::GltfAssetLabel;
 
 use camera::CameraPlugin;
 use camera::SelectionPlugin;
@@ -105,6 +106,22 @@ fn setup(
             .with_rotation(Quat::from_rotation_y(std::f32::consts::PI)),
         Color::srgb(0.55, 0.25, 0.25),
     );
+
+    // Spawn the CIWS GLTF Scene
+    // commands.spawn((
+    //     WorldAssetRoot(asset_server.load(
+    //         GltfAssetLabel::Scene(0).from_asset("models/type-730_ciws.glb"),
+    //     )),
+    //     Transform::from_xyz(0.0, 0.0, 0.0),
+    // ));
+    // Spawn the GLB model using the built-in prelude components
+    commands.spawn((
+        WorldAssetRoot(asset_server.load(
+            GltfAssetLabel::Scene(0).from_asset("models/type-730_ciws.glb")
+        )),
+        Transform::from_xyz(0.0, 10.0, 0.0)
+            .with_scale(Vec3::splat(20.0)),
+    ));
 }
 
 fn spawn_placeholder_ship(

@@ -10,9 +10,15 @@ nalgebra = "*"
 bytemuck = "1.25.2"
 wgpu = "30.0.1"
 bevy_egui = "0.42.0"
+mesh_to_sdf = "0.4.0"
+gltf = "1.4.1"
 
 [profile.dev]
 opt-level = 0
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[[bin]]
+name = "baker"
+path = "utils/baker.rs"
