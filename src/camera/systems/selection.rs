@@ -1,8 +1,7 @@
 use avian3d::prelude::{SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-
-use crate::voxel::GeneratedShipMesh;
+use crate::ship::ShipTag; // <-- Import the parent tag
 use crate::camera::Selected;
 
 pub fn select_ship_with_mouse(
@@ -11,48 +10,39 @@ pub fn select_ship_with_mouse(
     windows: Query<&Window, With<PrimaryWindow>>,
     cameras: Query<(&Camera, &GlobalTransform)>,
     spatial_query: SpatialQuery,
-    generated_ship_meshes: Query<&GeneratedShipMesh>,
+    // Change the query to look for the parent ShipTag
+    ships: Query<(), With<ShipTag>>, 
     selected_ships: Query<Entity, With<Selected>>,
 ) {
     if !mouse.just_pressed(MouseButton::Left) {
         return;
     }
 
-    let Ok(window) = windows.single() else {
-        return;
-    };
-    let Some(cursor_position) = window.cursor_position() else {
-        return;
-    };
-    let Ok((camera, camera_transform)) = cameras.single() else {
-        return;
-    };
-    let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
-        return;
-    };
+    let Ok(window) = windows.single() else { return; };
+    let Some(cursor_position) = window.cursor_position() else { return; };
+    let Ok((camera, camera_transform)) = cameras.single() else { return; };
+    let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_position) else { return; };
 
-    let mut ship_mesh_filter = |entity| generated_ship_meshes.get(entity).is_ok();
+    // Filter against the parent ShipTag instead of the child mesh
+    let mut ship_filter = |entity| ships.get(entity).is_ok();
+
     let hit = spatial_query.cast_ray_predicate(
         ray.origin,
         ray.direction,
         f32::MAX,
         true,
         &SpatialQueryFilter::default(),
-        &mut ship_mesh_filter,
+        &mut ship_filter,
     );
 
+    // Clear previous selection
     for selected_entity in &selected_ships {
         commands.entity(selected_entity).remove::<Selected>();
     }
 
-    let Some(hit) = hit else {
-        return;
-    };
-    let hit_entity = hit.entity;
-    let Ok(mesh_part) = generated_ship_meshes.get(hit_entity) else {
-        return;
-    };
+    let Some(hit) = hit else { return; };
 
-    commands.entity(mesh_part.ship).insert(Selected);
-    info!("Selected ship: {:?}", mesh_part.ship);
+    // The hit entity is the parent, so we can insert Selected directly
+    commands.entity(hit.entity).insert(Selected);
+    info!("Selected ship: {:?}", hit.entity);
 }

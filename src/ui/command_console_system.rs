@@ -1,53 +1,65 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
-use crate::camera::{CameraState, CameraStateTag, CameraControlState};
+use crate::camera::{CameraState, CameraStateTag, CameraControlState, Selected};
+use crate::ship::NavTarget;
 
 pub fn command_console_system(
+    mut commands: Commands,
     mut contexts: EguiContexts, 
     mut command_buffer: Local<String>,
     camera_state_query: Query<&CameraState, With<CameraStateTag>>,
+    selected_ships: Query<Entity, With<Selected>>, 
 ) {
-    // 1. Extract the context using the safe wrapper
-    let Ok(ctx) = contexts.ctx_mut() else { return; };
-
-    // 2. Only proceed if the camera is in COMMAND mode
     let Ok(state) = camera_state_query.single() else { return; };
-    
-    // TEST WINDOW: ALWAYS VISIBLE
-    egui::Window::new("Test UI Render")
-        .show(ctx, |ui| {
-            ui.label("If you can see this, EGUI is working!");
-        });
-
     if state.control_state != CameraControlState::COMMAND {
         return;
     }
 
-    // 3. Draw the interactive window
-    egui::Window::new("Terminal")
+    let Ok(ctx) = contexts.ctx_mut() else { return; };
+
+    egui::Window::new("Terminal [ESC to close]")
         .default_size([400.0, 200.0])
         .default_pos([10.0, 10.0])
         .resizable(true)
-        .collapsible(true)
         .show(ctx, |ui| {
-            // ui.label("System ready. Awaiting orders...");
-            // ui.separator();
-
+            ui.label("System ready. Awaiting orders...");
+            
             let response = ui.add(
                 egui::TextEdit::singleline(&mut *command_buffer)
-                    // .hint_text("e.g., move_to 10 0 -20")
+                    .hint_text("e.g., m_10_-20")
                     .desired_width(f32::INFINITY)
             );
 
-            // Handle the Enter Key
-            if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                let command = command_buffer.trim().to_string();
-                if !command.is_empty() {
-                    info!("Command Issued: {}", command); 
+            // FORCE FOCUS: All typing routes here immediately
+            response.request_focus();
+
+            // FIX: Remove `response.lost_focus()`, just check for the Enter key
+            if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                let command = command_buffer.trim().to_lowercase();
+                let parts: Vec<&str> = command.split('_').collect();
+
+                match parts.as_slice() {
+                    ["m", x_str, z_str] => {
+                        if let (Ok(x), Ok(z)) = (x_str.parse::<f32>(), z_str.parse::<f32>()) {
+                            let target = Vec3::new(x, 0.0, z);
+                            let mut count = 0;
+                            
+                            for entity in selected_ships.iter() {
+                                commands.entity(entity).insert(NavTarget(target));
+                                count += 1;
+                            }
+                            info!("Dispatched {} ship(s) to X:{} Z:{}", count, x, z);
+                        } else {
+                            warn!("Invalid coordinates: {}", command);
+                        }
+                    },
+                    // Prevent warning on empty submission
+                    [""] => {}, 
+                    _ => warn!("Unknown command: {}", command),
                 }
                 
+                // Clear the buffer after sending the command
                 command_buffer.clear();
-                response.request_focus();
             }
         });
 }

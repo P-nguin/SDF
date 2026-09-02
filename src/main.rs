@@ -14,6 +14,7 @@ use bevy::{
 use camera::CameraPlugin;
 use camera::SelectionPlugin;
 use ship::{ShipTag, ShipBundle};
+use crate::ship::ShipPlugin;
 use crate::voxel::{
     GenerateMesh, SDF_GRID_SIZE, SDF_WORLD_SIZE, SDFChunk, generate_chunk_mesh_system, 
     VoxelComputePlugin, VoxelDestructionPlugin,
@@ -42,6 +43,7 @@ fn main() {
             }),
     )
     .add_plugins(bevy_egui::EguiPlugin::default())
+    .add_plugins(ShipPlugin)
     .add_plugins(WireframePlugin::default())
     .insert_resource(WireframeConfig {
         global: false,
