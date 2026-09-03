@@ -3,6 +3,7 @@ mod qef;
 mod ship;
 mod voxel;
 mod ui;
+mod weapons;
 
 use avian3d::prelude::{GravityScale, PhysicsPlugins, RigidBody};
 use bevy::prelude::*;
@@ -12,20 +13,20 @@ use bevy::{
 };
 // use bevy::gltf::GltfAssetLabel;
 
-use camera::CameraPlugin;
-use camera::SelectionPlugin;
-use ship::{ShipTag, ShipBundle};
-use crate::ship::ShipPlugin;
-use crate::voxel::{
-    GenerateMesh, SDF_GRID_SIZE, SDF_WORLD_SIZE, SDFChunk, generate_chunk_mesh_system, 
-    VoxelComputePlugin, VoxelDestructionPlugin,
-};
-use ui::CommandUIPlugin;
+use camera::*;
+use ship::*;
+use voxel::*;
+use ui::*;
+use weapons::*;
 
 fn main() {
     let mut app = App::new();
     app.add_plugins(
         DefaultPlugins
+            .set(AssetPlugin {
+                watch_for_changes_override: Some(true),
+                ..default()
+            })
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "SDF 3D Starter".into(),
@@ -45,6 +46,7 @@ fn main() {
     )
     .add_plugins(bevy_egui::EguiPlugin::default())
     .add_plugins(ShipPlugin)
+    .add_plugins(WeaponsPlugin)
     .add_plugins(WireframePlugin::default())
     .insert_resource(WireframeConfig {
         global: false,
@@ -130,15 +132,15 @@ fn spawn_placeholder_ship(
     asset_server: &AssetServer,
     transform: Transform,
     ship_color: Color,
-) {
+) -> Entity {
     let size = SDF_GRID_SIZE;
     let volume = (size * size * size) as usize;
     let mut distances = vec![1.0; volume];
 
     let voxel_size = SDF_WORLD_SIZE / (size - 1) as f32;
     let grid_center = (size - 1) as f32 * 0.5;
-
     let center = Vec3::ZERO;
+
     let room_volumes = [
         (Vec3::new(-3.5, 0.0, 0.0), Vec3::new(2.0, 1.5, 3.0)),
         (Vec3::new(3.5, 0.0, 0.0), Vec3::new(2.0, 1.5, 3.0)),
@@ -163,28 +165,28 @@ fn spawn_placeholder_ship(
                 let final_sdf = op_subtract(hull, air);
 
                 let index = (z * size * size) + (y * size) + x;
-                let index = index as usize;
-                distances[index] = final_sdf;
+                distances[index as usize] = final_sdf;
             }
         }
     }
 
     let material = materials.add(StandardMaterial {
         base_color: ship_color,
-        cull_mode: None, // <-- Temporarily disable culling to test
+        cull_mode: None,
         ..default()
     });
 
     let font_handle = asset_server.load("textures/font.png");
     let data_material = materials.add(StandardMaterial {
-        base_color_texture: Some(font_handle.clone()),
+        base_color_texture: Some(font_handle),
         base_color: Color::srgb(1.0, 0.0, 0.0),
         unlit: true,
         alpha_mode: AlphaMode::Blend,
         ..default()
     });
 
-    commands.spawn((
+    // 1. Spawn the main ship hull
+    let ship_entity = commands.spawn((
         ShipBundle {
             ship_tag: ShipTag,
             transform,
@@ -192,13 +194,85 @@ fn spawn_placeholder_ship(
             chunks: SDFChunk {
                 distances,
                 material,
-                data_material,
+                data_material: data_material.clone(),
             },
             generate_mesh: GenerateMesh,
         },
         Visibility::Visible,
         GravityScale(0.0),
+    )).id();
+
+    // 2. Define turret materials
+    let material_grey = materials.add(Color::srgb(0.4, 0.4, 0.45));
+
+    // 3. Spawn the Turret Base
+    let base_entity = commands.spawn((
+        Name::new("Turret Base"),
+        TurretBase { health: 100.0, turn_speed: 2.0 },
+        SDFChunk {
+            distances: generate_box_chunk(Vec3::new(2.0, 0.25, 2.0), Vec3::ZERO),
+            material: material_grey.clone(),
+            data_material: data_material.clone(),
+        },
+        GenerateMesh,
+        Transform::from_xyz(0.0, 2.0, 0.0), // Sits on top of the hull
+        Visibility::Visible,
+    )).id();
+
+    // 4. Spawn the Turret Body
+    let body_entity = commands.spawn((
+        Name::new("Turret Body"),
+        SDFChunk {
+            distances: generate_box_chunk(Vec3::new(1.0, 1.0, 1.0), Vec3::ZERO),
+            material: material_grey.clone(),
+            data_material: data_material.clone(),
+        },
+        GenerateMesh,
+        Transform::from_xyz(0.0, 1.0, 0.0), // Sits on top of the base
+        Visibility::Visible,
+    )).id();
+
+    // 5. Spawn the Turret Barrel
+    let barrel_half_height = 2.0;
+    let barrel_entity = commands.spawn((
+        Name::new("Turret Barrel"),
+        TurretBarrel { 
+            health: 50.0, 
+            pitch_speed: 1.5, 
+            min_depression: -0.2, 
+            max_elevation: 1.0 
+        },
+        SDFChunk {
+            distances: generate_cylinder_chunk(0.2, barrel_half_height, Vec3::new(0.0, 0.0, barrel_half_height)),
+            material: material_grey,
+            data_material,
+        },
+        GenerateMesh,
+        Transform::from_xyz(0.0, 0.0, 1.0), // Extends from the front of the body
+        Visibility::Visible,
+    )).id();
+
+    // 6. Link the hierarchy
+    commands.entity(base_entity).add_child(body_entity);
+    commands.entity(body_entity).add_child(barrel_entity);
+    commands.entity(ship_entity).add_child(base_entity);
+
+    // 7. Spawn the Turret Logic Controller
+    commands.spawn((
+        Name::new("Turret Logic Controller"),
+        Turret {
+            base_entity,
+            barrel_entity,
+            health: 150.0,
+            damage: 10.0,
+            reload_time: 3.0,
+            reload: 0.0,
+            range: 10.0,
+            target: None,
+        }
     ));
+
+    ship_entity
 }
 
 fn toggle_wireframe_debug(
@@ -216,10 +290,55 @@ fn sdf_box(p: Vec3, extents: Vec3) -> f32 {
     q.max(Vec3::ZERO).length() + q.x.max(q.y.max(q.z)).min(0.0)
 }
 
+fn sdf_cylinder(p: Vec3, radius: f32, half_height: f32) -> f32 {
+    let d = Vec2::new(p.x.hypot(p.z) - radius, p.y.abs() - half_height);
+    d.max(Vec2::ZERO).length() + d.x.max(d.y).min(0.0)
+}
+
 fn op_union(d1: f32, d2: f32) -> f32 {
     d1.min(d2)
 }
 
 fn op_subtract(d1: f32, d2: f32) -> f32 {
     d1.max(-d2)
+}
+
+fn generate_box_chunk(extents: Vec3, pivot_offset: Vec3) -> Vec<f32> {
+    let size = SDF_GRID_SIZE;
+    let voxel_size = SDF_WORLD_SIZE / (size - 1) as f32;
+    let grid_center = (size - 1) as f32 * 0.5;
+    let mut distances = vec![1.0; (size * size * size) as usize];
+
+    for z in 0..size {
+        for y in 0..size {
+            for x in 0..size {
+                let pos = (Vec3::new(x as f32, y as f32, z as f32) - Vec3::splat(grid_center)) * voxel_size;
+                
+                // Subtract the offset before calculating the SDF
+                distances[(z * size * size + y * size + x) as usize] = sdf_box(pos - pivot_offset, extents);
+            }
+        }
+    }
+    distances
+}
+
+fn generate_cylinder_chunk(radius: f32, half_height: f32, pivot_offset: Vec3) -> Vec<f32> {
+    let size = SDF_GRID_SIZE;
+    let voxel_size = SDF_WORLD_SIZE / (size - 1) as f32;
+    let grid_center = (size - 1) as f32 * 0.5;
+    let mut distances = vec![1.0; (size * size * size) as usize];
+
+    for z in 0..size {
+        for y in 0..size {
+            for x in 0..size {
+                let pos = (Vec3::new(x as f32, y as f32, z as f32) - Vec3::splat(grid_center)) * voxel_size;
+                
+                // For a Z-aligned barrel (pointing forward instead of up), we swap Y and Z
+                let z_aligned_pos = Vec3::new(pos.x, pos.z, pos.y);
+                
+                distances[(z * size * size + y * size + x) as usize] = sdf_cylinder(z_aligned_pos - pivot_offset, radius, half_height);
+            }
+        }
+    }
+    distances
 }

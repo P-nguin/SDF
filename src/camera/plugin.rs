@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy::camera::visibility::RenderLayers;
-use bevy::camera::ClearColorConfig;
 
 use bevy::core_pipeline::prepass::DepthPrepass;
 
