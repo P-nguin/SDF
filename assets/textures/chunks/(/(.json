@@ -1,0 +1,194 @@
+{
+  "frames" : [
+    {
+      "duration" : 225,
+      "filename" : "Parentheses 0",
+      "frame" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 0
+      },
+      "rotated" : false,
+      "sourceSize" : {
+        "h" : 16,
+        "w" : 16
+      },
+      "spriteSourceSize" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 0
+      },
+      "trimmed" : false
+    },
+    {
+      "duration" : 225,
+      "filename" : "Parentheses 1",
+      "frame" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 16,
+        "y" : 0
+      },
+      "rotated" : false,
+      "sourceSize" : {
+        "h" : 16,
+        "w" : 16
+      },
+      "spriteSourceSize" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 0
+      },
+      "trimmed" : false
+    },
+    {
+      "duration" : 225,
+      "filename" : "Parentheses 2",
+      "frame" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 32,
+        "y" : 0
+      },
+      "rotated" : false,
+      "sourceSize" : {
+        "h" : 16,
+        "w" : 16
+      },
+      "spriteSourceSize" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 0
+      },
+      "trimmed" : false
+    },
+    {
+      "duration" : 225,
+      "filename" : "Parentheses 3",
+      "frame" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 16
+      },
+      "rotated" : false,
+      "sourceSize" : {
+        "h" : 16,
+        "w" : 16
+      },
+      "spriteSourceSize" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 0
+      },
+      "trimmed" : false
+    },
+    {
+      "duration" : 225,
+      "filename" : "Parentheses 4",
+      "frame" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 16,
+        "y" : 16
+      },
+      "rotated" : false,
+      "sourceSize" : {
+        "h" : 16,
+        "w" : 16
+      },
+      "spriteSourceSize" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 0
+      },
+      "trimmed" : false
+    },
+    {
+      "duration" : 225,
+      "filename" : "Parentheses 5",
+      "frame" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 32,
+        "y" : 16
+      },
+      "rotated" : false,
+      "sourceSize" : {
+        "h" : 16,
+        "w" : 16
+      },
+      "spriteSourceSize" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 0
+      },
+      "trimmed" : false
+    },
+    {
+      "duration" : 225,
+      "filename" : "Parentheses 6",
+      "frame" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 32
+      },
+      "rotated" : false,
+      "sourceSize" : {
+        "h" : 16,
+        "w" : 16
+      },
+      "spriteSourceSize" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 0
+      },
+      "trimmed" : false
+    },
+    {
+      "duration" : 225,
+      "filename" : "Parentheses 7",
+      "frame" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 16,
+        "y" : 32
+      },
+      "rotated" : false,
+      "sourceSize" : {
+        "h" : 16,
+        "w" : 16
+      },
+      "spriteSourceSize" : {
+        "h" : 16,
+        "w" : 16,
+        "x" : 0,
+        "y" : 0
+      },
+      "trimmed" : false
+    }
+  ],
+  "meta" : {
+    "app" : "Pixquare",
+    "format" : "RGBA888",
+    "frameTags" : [
+
+    ],
+    "image" : "Parentheses.png",
+    "scale" : 1,
+    "size" : {
+      "h" : 48,
+      "w" : 48
+    },
+    "version" : "2.72.0"
+  }
+}

@@ -6426,6 +6426,8 @@ dependencies = [
  "image",
  "mesh_to_sdf",
  "nalgebra 0.34.2",
+ "serde",
+ "serde_json",
  "wgpu 30.0.1",
 ]
 

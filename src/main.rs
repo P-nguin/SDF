@@ -9,10 +9,12 @@ mod ships;
 mod voxels;
 mod textures;
 mod navigation;
+mod camera;
 
 use crate::ships::*;
 use crate::textures::*;
 use crate::navigation::*;
+use crate::camera::*;
 
 fn main() {
     let mut app = App::new();
@@ -21,7 +23,10 @@ fn main() {
         .add_plugins(PhysicsPlugins::default())
         .insert_resource(Gravity(Vec2::ZERO))        
         .add_plugins(ChunkRegistryPlugin)
+        .add_plugins(CellRegistryPlugin)
         .add_plugins(MoveToPlugin)
+        .add_plugins(CameraControlPlugin)
+        .add_plugins(CellEffectPlugin)
         .add_systems(Startup, setup)
         .add_systems(Update, mv);
         
@@ -30,21 +35,27 @@ fn main() {
 
 fn setup(
     mut commands: Commands,
-    registry: Res<ChunkRegistry>, 
+    chunk_registry: Res<ChunkRegistry>,
+    cell_registry: Res<CellRegistry>,
 ) {
-    commands.spawn(Camera2d);
+    commands.spawn((
+        Camera2d, 
+        CameraState { zoom: 1.0 }
+    ));
 
-    let blueprint = [
-        " --- ",
-        " --- ",
-        "-----",
-        " --- ",
-        " --- ",
+    // Define the ship using string slices: ["Type", "Direction"]
+    let blueprint = vec![
+        vec![[" ", " "], ["-", "U"], ["-", "U"], ["-", "U"], [" ", " "]],
+        vec![[" ", " "], ["-", "U"], ["+", "U"], ["-", "U"], [" ", " "]],
+        vec![["-", "L"], ["-", "L"], ["*", "U"], ["-", "R"], ["-", "R"]],
+        vec![[" ", " "], ["-", "D"], ["(", "U"], ["-", "D"], [" ", " "]],
+        vec![[" ", " "], ["-", "D"], ["-", "D"], ["-", "D"], [" ", " "]],
     ];
 
     Ship::spawn_ship(
         &mut commands,
-        &registry,
+        &chunk_registry,
+        &cell_registry,
         &blueprint,
         Vec2::new(0.0, 5.0),
     );

@@ -2,33 +2,35 @@ use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct VoxelChunk {
-    chunk_type: VoxelChunkType,
-    chunk: Vec<i8>,
-    texture: Option<Entity>,
+    pub orientation: IVec2,
 }
 impl VoxelChunk {
-    pub fn create_voxel_chunk(chunk_type: VoxelChunkType, chunk: Vec<i8>, texture: Option<&Entity>) -> VoxelChunk {
+    pub fn create_voxel_chunk(chunk_type: char, chunk: Vec<i8>, orientation: IVec2, texture: Option<&Entity>) -> VoxelChunk {
         VoxelChunk { 
-            chunk_type, 
-            chunk, 
-            texture: texture.copied()
+            orientation,
         }
     }
 }
-
+impl VoxelChunk {
+    pub fn new(orientation: IVec2,) -> VoxelChunk {
+        VoxelChunk {
+            orientation,
+        }
+    }
+}
 
 #[derive(Component)]
-pub struct VoxelChunkTexture {
-    texture: Handle<Image>
+pub struct VoxelChunkGrid {
+    chunk: Vec<i8>,
 }
-impl VoxelChunkTexture {
-    pub fn create_voxel_chunk_texture(texture: Handle<Image>) -> VoxelChunkTexture {
-        VoxelChunkTexture {
-            texture
-        }
+impl VoxelChunkGrid {
+    pub fn new(chunk: Vec<i8>) -> VoxelChunkGrid {
+        VoxelChunkGrid { chunk }
     }
 }
 
-pub enum VoxelChunkType {
-    Armor,
+#[derive(Bundle)]
+pub struct VoxelBundle {
+    chunk: VoxelChunk,
+    grid: VoxelChunkGrid,
 }
