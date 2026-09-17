@@ -3,6 +3,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::ships::components::*;
+use crate::cells::components::*;
 use crate::voxels::components::*;
 use crate::textures::components::*;
 
@@ -141,9 +142,9 @@ impl ShipGrid {
                                 shield_health: 100,
                                 shield_regen: 5,
                                 shield_respawn: 5,
-                                projection_distance: 10,
+                                projection_distance: 5,
                                 projection: None,
-                                shield_thickness: 1,
+                                shield_thickness: 3,
                             })); },
                         "-" => { commands.entity(chunk_entity).insert(MinusCell); },
                         _ => {}

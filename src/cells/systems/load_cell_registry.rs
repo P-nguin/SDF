@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::ships::components::*;
+use crate::cells::components::*;
 
 pub fn load_cell_registry(
     mut commands: Commands,

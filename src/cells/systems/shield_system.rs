@@ -1,6 +1,7 @@
 // In src/ships/systems/shield_system.rs
 use bevy::prelude::*;
-use crate::ships::components::*;
+use crate::ships::*;
+use crate::cells::components::*;
 use crate::textures::components::{AnimationState, ChunkRegistry};
 use crate::voxels::components::VoxelGrid;
 

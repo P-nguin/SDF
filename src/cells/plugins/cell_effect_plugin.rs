@@ -1,7 +1,7 @@
 // In src/ships/plugins/effects_plugin.rs
 use bevy::prelude::*;
 
-use crate::ships::systems::*;
+use crate::cells::systems::*;
 
 pub struct CellEffectPlugin;
 

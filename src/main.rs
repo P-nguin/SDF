@@ -10,8 +10,10 @@ mod voxels;
 mod textures;
 mod navigation;
 mod camera;
+mod cells;
 
 use crate::ships::*;
+use crate::cells::*;
 use crate::textures::*;
 use crate::navigation::*;
 use crate::camera::*;

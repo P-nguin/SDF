@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::ecs::relationship::Relationship;
-use crate::ships::components::*;
+use crate::ships::*;
+use crate::cells::components::*;
 
 pub fn plus_effect_system(
     grids: Query<&ShipGrid>,

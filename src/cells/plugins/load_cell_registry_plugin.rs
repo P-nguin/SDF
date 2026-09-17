@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::ships::load_cell_registry;
+use crate::cells::load_cell_registry;
 
 pub struct CellRegistryPlugin;
 
