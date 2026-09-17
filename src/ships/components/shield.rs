@@ -15,6 +15,7 @@ pub struct ShieldStats {
     pub shield_respawn: i16,
     
     pub projection_distance: i32, 
+    pub shield_thickness: i32,
 
     pub projection: Option<Entity> // this will be a ShieldProjection
 }

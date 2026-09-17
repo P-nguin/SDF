@@ -140,9 +140,10 @@ impl ShipGrid {
                                 shield_max_health: 100,
                                 shield_health: 100,
                                 shield_regen: 5,
-                                shield_respawn: 10,
-                                projection_distance: 4,
+                                shield_respawn: 5,
+                                projection_distance: 10,
                                 projection: None,
+                                shield_thickness: 1,
                             })); },
                         "-" => { commands.entity(chunk_entity).insert(MinusCell); },
                         _ => {}

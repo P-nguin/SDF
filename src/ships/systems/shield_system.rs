@@ -4,23 +4,55 @@ use crate::ships::components::*;
 use crate::textures::components::{AnimationState, ChunkRegistry};
 use crate::voxels::components::VoxelGrid;
 
-/// Generates a U-shaped or V-shaped shield blueprint based on distance.
-fn generate_shield_blueprint(distance: i32) -> Vec<Vec<&'static str>> {
+// Generates a perfectly symmetrical U-shaped shield blueprint.
+fn generate_shield_blueprint(distance: i32, thickness: i32) -> Vec<Vec<&'static str>> {
+    let actual_thickness = thickness.max(1);
+
     if distance <= 0 {
-        return vec![vec!["sb"]];
+        return vec![vec!["sb"; actual_thickness as usize]];
     }
 
     let half_width = distance; 
-    let width = (half_width * 2 + 1) as usize;
+    let grid_width = (half_width * 2 + 1) as usize;
     let max_pullback = distance;
+    let grid_height = (max_pullback + actual_thickness) as usize;
 
-    let mut blueprint = vec![vec![" "; width]; (max_pullback + 1) as usize];
+    let mut blueprint = vec![vec![" "; grid_width]; grid_height];
 
-    for x in -half_width..=half_width {
+    let mut prev_y: Option<i32> = None;
+
+    // ONLY loop from the center (0) to the right edge (half_width)
+    for x in 0..=half_width {
+        // Calculate math for the right side
         let y = ((x as f32).powi(2) * (max_pullback as f32) / (half_width as f32).powi(2)).round() as i32;
-        let col_idx = (x + half_width) as usize;
-        let row_idx = y as usize;
-        blueprint[row_idx][col_idx] = "sb";
+
+        let mut draw_y_start = y;
+        let draw_y_end = y;
+
+        // Fill steep vertical gaps
+        if let Some(py) = prev_y {
+            if y > py + 1 {
+                draw_y_start = py + 1; 
+            }
+        }
+
+        // Draw the blocks and apply thickness
+        for fill_y in draw_y_start..=draw_y_end {
+            for dy in 0..actual_thickness {
+                let final_y = fill_y + dy;
+                if final_y >= 0 && (final_y as usize) < grid_height {
+                    
+                    // MIRROR MAGIC: Draw the right side
+                    let right_x = (half_width + x) as usize;
+                    blueprint[final_y as usize][right_x] = "sb";
+                    
+                    // MIRROR MAGIC: Draw the exact same thing on the left side
+                    let left_x = (half_width - x) as usize;
+                    blueprint[final_y as usize][left_x] = "sb";
+                }
+            }
+        }
+        prev_y = Some(y);
     }
 
     blueprint
@@ -40,7 +72,7 @@ pub fn shield_builder_system(
             }
         }
 
-        let blueprint = generate_shield_blueprint(stats.projection_distance);
+        let blueprint = generate_shield_blueprint(stats.projection_distance, stats.shield_thickness);
 
         let grid = VoxelGrid::create_voxel_grid(
             &blueprint,
