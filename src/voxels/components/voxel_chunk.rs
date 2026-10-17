@@ -21,11 +21,13 @@ impl VoxelChunk {
 
 #[derive(Component)]
 pub struct VoxelChunkGrid {
-    chunk: Vec<i8>,
+    pub chunk_health: Vec<f32>,
+    pub width: usize,
+    pub height: usize,
 }
 impl VoxelChunkGrid {
-    pub fn new(chunk: Vec<i8>) -> VoxelChunkGrid {
-        VoxelChunkGrid { chunk }
+    pub fn new(chunk_health: Vec<f32>, width: usize, height: usize) -> VoxelChunkGrid {
+        VoxelChunkGrid { chunk_health, width, height }
     }
 }
 

@@ -1,0 +1,282 @@
+   Compiling sdf_3d v0.1.0 (/Users/danielzhao/Documents/Github/SDF)
+warning: unused import: `crate::ships::components::*`
+ --> src/ships/components/ship.rs:5:5
+  |
+5 | use crate::ships::components::*;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `systems::*`
+ --> src/ships/mod.rs:6:9
+  |
+6 | pub use systems::*;
+  |         ^^^^^^^^^^
+
+warning: unused import: `plugins::*`
+ --> src/ships/mod.rs:7:9
+  |
+7 | pub use plugins::*;
+  |         ^^^^^^^^^^
+
+warning: unused import: `bevy::prelude::*`
+ --> src/voxels/systems/complie_textures.rs:1:5
+  |
+1 | use bevy::prelude::*;
+  |     ^^^^^^^^^^^^^^^^
+
+warning: unused import: `image::GenericImageView`
+ --> src/voxels/systems/complie_textures.rs:2:5
+  |
+2 | use image::GenericImageView;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `complie_textures::*`
+ --> src/voxels/systems/mod.rs:5:9
+  |
+5 | pub use complie_textures::*;
+  |         ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `components::*`
+ --> src/voxels/mod.rs:4:9
+  |
+4 | pub use components::*;
+  |         ^^^^^^^^^^^^^
+
+warning: unused import: `systems::*`
+ --> src/camera/mod.rs:6:9
+  |
+6 | pub use systems::*;
+  |         ^^^^^^^^^^
+
+warning: unused import: `crate::ships::*`
+ --> src/cells/systems/shield_system.rs:3:5
+  |
+3 | use crate::ships::*;
+  |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `plus_system::*`
+ --> src/cells/systems/mod.rs:6:9
+  |
+6 | pub use plus_system::*;
+  |         ^^^^^^^^^^^^^^
+
+warning: unused import: `systems::*`
+ --> src/weapons/mod.rs:6:9
+  |
+6 | pub use systems::*;
+  |         ^^^^^^^^^^
+
+warning: unused import: `crate::projectiles::*`
+  --> src/main.rs:23:5
+   |
+23 | use crate::projectiles::*;
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `chunk_type`
+ --> src/voxels/components/voxel_chunk.rs:8:31
+  |
+8 |     pub fn create_voxel_chunk(chunk_type: char, chunk: Vec<i8>, orientation: IVec2, texture: Option<&Entity>) -> VoxelChunk {
+  |                               ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_chunk_type`
+  |
+  = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `chunk`
+ --> src/voxels/components/voxel_chunk.rs:8:49
+  |
+8 |     pub fn create_voxel_chunk(chunk_type: char, chunk: Vec<i8>, orientation: IVec2, texture: Option<&Entity>) -> VoxelChunk {
+  |                                                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_chunk`
+
+warning: unused variable: `texture`
+ --> src/voxels/components/voxel_chunk.rs:8:85
+  |
+8 |     pub fn create_voxel_chunk(chunk_type: char, chunk: Vec<i8>, orientation: IVec2, texture: Option<&Entity>) -> VoxelChunk {
+  |                                                                                     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_texture`
+
+warning: unused variable: `x`
+  --> src/cells/systems/shield_system.rs:80:14
+   |
+80 |             |x, y, cell_type, local_x, local_y| {
+   |              ^ help: if this is intentional, prefix it with an underscore: `_x`
+
+warning: unused variable: `y`
+  --> src/cells/systems/shield_system.rs:80:17
+   |
+80 |             |x, y, cell_type, local_x, local_y| {
+   |                 ^ help: if this is intentional, prefix it with an underscore: `_y`
+
+warning: variable `found` is assigned to, but never used
+  --> src/projectiles/systems/hit_detection.rs:70:25
+   |
+70 |                     let mut found = false;
+   |                         ^^^^^^^^^
+   |
+   = note: consider using `_found` instead
+
+warning: value assigned to `found` is never read
+  --> src/projectiles/systems/hit_detection.rs:85:37
+   |
+85 | ...                   found = true;
+   |                       ^^^^^^^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+   = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `width`, `height`, and `grid` are never read
+  --> src/ships/components/ship.rs:55:9
+   |
+54 | pub struct ShipGrid {
+   |            -------- fields in this struct
+55 |     pub width: usize,
+   |         ^^^^^
+56 |     pub height: usize,
+   |         ^^^^^^
+57 |     pub grid: Vec<Option<Entity>>,
+   |         ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `orientation` is never read
+ --> src/voxels/components/voxel_chunk.rs:5:9
+  |
+4 | pub struct VoxelChunk {
+  |            ---------- field in this struct
+5 |     pub orientation: IVec2,
+  |         ^^^^^^^^^^^
+
+warning: associated function `create_voxel_chunk` is never used
+ --> src/voxels/components/voxel_chunk.rs:8:12
+  |
+7 | impl VoxelChunk {
+  | --------------- associated function in this implementation
+8 |     pub fn create_voxel_chunk(chunk_type: char, chunk: Vec<i8>, orientation: IVec2, texture: Option<&Entity>) -> VoxelChunk {
+  |            ^^^^^^^^^^^^^^^^^^
+
+warning: struct `VoxelBundle` is never constructed
+  --> src/voxels/components/voxel_chunk.rs:35:12
+   |
+35 | pub struct VoxelBundle {
+   |            ^^^^^^^^^^^
+
+warning: fields `height` and `width` are never read
+ --> src/voxels/components/voxel_grid.rs:5:9
+  |
+4 | pub struct VoxelGrid {
+  |            --------- fields in this struct
+5 |     pub height: usize,
+  |         ^^^^^^
+6 |     pub width: usize,
+  |         ^^^^^
+
+warning: associated function `new` is never used
+  --> src/voxels/components/voxel_grid.rs:11:12
+   |
+10 | impl VoxelGrid {
+   | -------------- associated function in this implementation
+11 |     pub fn new(width: usize, height: usize) -> Self {
+   |            ^^^
+
+warning: function `compile_textures` is never used
+ --> src/voxels/systems/complie_textures.rs:4:8
+  |
+4 | pub fn compile_textures() {
+  |        ^^^^^^^^^^^^^^^^
+
+warning: fields `cell_type`, `minus`, `give_plus`, `plus`, `shield`, and `max_shield` are never read
+  --> src/cells/components/cell.rs:12:9
+   |
+11 | pub struct Cell {
+   |            ---- fields in this struct
+12 |     pub cell_type: String,
+   |         ^^^^^^^^^
+...
+17 |     pub minus: f32,
+   |         ^^^^^
+18 |
+19 |     pub give_plus: f32,
+   |         ^^^^^^^^^
+20 |     pub plus: f32,
+   |         ^^^^
+21 |
+22 |     pub shield: f32,
+   |         ^^^^^^
+23 |     pub max_shield: f32,
+   |         ^^^^^^^^^^
+   |
+   = note: `Cell` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: fields `x` and `y` are never read
+  --> src/cells/components/cell.rs:54:9
+   |
+53 | pub struct CellPos {
+   |            ------- fields in this struct
+54 |     pub x: i16, 
+   |         ^
+55 |     pub y:i16,
+   |         ^
+
+warning: fields `shield_type`, `shield_max_health`, `shield_health`, `shield_regen`, and `shield_respawn` are never read
+  --> src/cells/components/shield.rs:10:9
+   |
+ 9 | pub struct ShieldStats {
+   |            ----------- fields in this struct
+10 |     pub shield_type: String,
+   |         ^^^^^^^^^^^
+11 |
+12 |     pub shield_max_health: i32,
+   |         ^^^^^^^^^^^^^^^^^
+13 |     pub shield_health: i32,
+   |         ^^^^^^^^^^^^^
+14 |     pub shield_regen: i32,
+   |         ^^^^^^^^^^^^
+15 |     pub shield_respawn: i16,
+   |         ^^^^^^^^^^^^^^
+
+warning: struct `ShieldCellBundle` is never constructed
+  --> src/cells/components/shield.rs:24:12
+   |
+24 | pub struct ShieldCellBundle {
+   |            ^^^^^^^^^^^^^^^^
+
+warning: struct `ShieldProjectionStats` is never constructed
+  --> src/cells/components/shield.rs:34:12
+   |
+34 | pub struct ShieldProjectionStats {
+   |            ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `plus_effect_system` is never used
+ --> src/cells/systems/plus_system.rs:6:8
+  |
+6 | pub fn plus_effect_system(
+  |        ^^^^^^^^^^^^^^^^^^
+
+warning: fields `max_range` and `firing_arc` are never read
+  --> src/weapons/components/weapon.rs:21:9
+   |
+18 | pub struct Turret {
+   |            ------ fields in this struct
+...
+21 |     pub max_range: f32,
+   |         ^^^^^^^^^
+22 |     pub firing_arc: f32, // in radians
+   |         ^^^^^^^^^^
+   |
+   = note: `Turret` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: fields `energy` and `energy_loss_rate` are never read
+  --> src/projectiles/components/plasma.rs:10:9
+   |
+ 8 | pub struct PlasmaProjectileStats {
+   |            --------------------- fields in this struct
+ 9 |     pub damage: i32,
+10 |     pub energy: i32,
+   |         ^^^^^^
+11 |     pub energy_loss_rate: i32,
+   |         ^^^^^^^^^^^^^^^^
+
+warning: `sdf_3d` (bin "sdf_3d") generated 34 warnings (run `cargo fix --bin "sdf_3d" -p sdf_3d` to apply 17 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.02s
+     Running `target/debug/sdf_3d`
+[2m2026-10-03T22:44:00.335176Z[0m [32m INFO[0m [2mbevy_diagnostic::system_information_diagnostics_plugin::internal[0m[2m:[0m SystemInfo { os: "macOS 14.5 Sonoma", kernel: "23.5.0", cpu: "Apple M1 Pro", core_count: "8", memory: "16.0 GiB" }
+[2m2026-10-03T22:44:00.335774Z[0m [32m INFO[0m [2mbevy_app::terminal_ctrl_c_handler[0m[2m:[0m Skipping installing `Ctrl+C` handler as one was already installed. Please call `TerminalCtrlCHandlerPlugin::gracefully_exit` in your own `Ctrl+C` handler if you want Bevy to gracefully exit on `Ctrl+C`.
+[2m2026-10-03T22:44:00.400488Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "Apple M1 Pro", vendor: 0, device: 0, device_type: IntegratedGpu, device_pci_bus_id: "", driver: "", driver_info: "", backend: Metal, subgroup_min_size: 4, subgroup_max_size: 64, transient_saves_memory: true }

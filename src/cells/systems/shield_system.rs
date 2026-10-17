@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::ships::*;
 use crate::cells::components::*;
 use crate::textures::components::{AnimationState, ChunkRegistry};
-use crate::voxels::components::VoxelGrid;
+use crate::voxels::components::{VoxelGrid, VoxelChunkGrid};
 
 // Generates a perfectly symmetrical U-shaped shield blueprint.
 fn generate_shield_blueprint(distance: i32, thickness: i32) -> Vec<Vec<&'static str>> {
@@ -62,6 +62,7 @@ fn generate_shield_blueprint(distance: i32, thickness: i32) -> Vec<Vec<&'static 
 pub fn shield_builder_system(
     mut commands: Commands,
     chunk_registry: Res<ChunkRegistry>,
+    cell_registry: Res<CellRegistry>,
     mut projectors: Query<(Entity, &mut ShieldStats), Changed<ShieldStats>>, 
 ) {
     let chunk_size = 16.0;
@@ -82,6 +83,25 @@ pub fn shield_builder_system(
                 
                 if let Some(chunk_blueprint) = chunk_registry.blueprints.get(*cell_type) {
                     let chunk_entity = commands.spawn((
+                        // 1. Gameplay logic component
+                        Cell::from_registry("sb", &cell_registry),
+                        
+                        // 2. Voxel metadata and logical state
+                        CellPos { x: x as i16, y: y as i16, },
+                        {
+                            let cell = Cell::from_registry("sb", &cell_registry);
+                            let chunk_health: Vec<f32> = chunk_blueprint.voxel_data.iter().map(|&v| {
+                                if v == 1 { cell.health } else { 0.0 }
+                            }).collect();
+                            VoxelChunkGrid::new(chunk_health, chunk_blueprint.width, chunk_blueprint.height)
+                        },
+
+                        avian2d::prelude::CollisionLayers::new(
+                            [crate::physics::GameLayer::Shield],
+                            [crate::physics::GameLayer::Projectile]
+                        ),
+
+                        // 3. Visual components
                         Sprite {
                             image: chunk_blueprint.texture.clone(),
                             custom_size: Some(Vec2::new(chunk_size, chunk_size)),
@@ -93,12 +113,13 @@ pub fn shield_builder_system(
                         Transform::from_xyz(local_x, local_y, 0.0),
                     )).id();
                     
-                    if let Some(durations) = &chunk_blueprint.frame_durations {
-                        if !durations.is_empty() {
+                    if let Some(part) = chunk_blueprint.parts.values().next() {
+                        if !part.frame_durations.is_empty() {
                             commands.entity(chunk_entity).insert(AnimationState {
-                                timer: Timer::new(std::time::Duration::from_millis(durations[0] as u64), TimerMode::Once),
-                                current_frame: 0,
-                                frame_durations: durations.clone(),
+                                timer: Timer::new(std::time::Duration::from_millis(part.frame_durations[0] as u64), TimerMode::Once),
+                                current_index: 0,
+                                frame_indices: part.frame_indices.clone(),
+                                frame_durations: part.frame_durations.clone(),
                             });
                         }
                     }

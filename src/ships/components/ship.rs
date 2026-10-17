@@ -19,16 +19,20 @@ impl Ship {
     ) -> Entity {
         let ship_entity = commands.spawn(ShipBundle {
             ship_tag: Ship,
-            nav: ShipNav {
+            nav: crate::navigation::MovementProfile {
+                max_forward_thrust: 50.0,
+                max_reverse_thrust: 25.0,
+                max_strafe_thrust: 25.0,
                 max_speed: 200.0,
-                max_accel: 50.0,
-                max_turn: 3.0,
+                max_turn_rate: 3.0,
             },
             transform: Transform::from_xyz(spawn_pos.x, spawn_pos.y, 0.0),
             visibility: Visibility::Visible,
             rigid_body: RigidBody::Dynamic,
             linear_velocity: LinearVelocity::default(),
             angular_velocity: AngularVelocity::default(),
+            targeting: crate::weapons::components::ShipTargetingComputer::default(),
+            targetable: crate::controls::components::Targetable,
         }).id();
 
         let grid = ShipGrid::create_ship_grid(
@@ -43,12 +47,7 @@ impl Ship {
     }
 }
 
-#[derive(Component)]
-pub struct ShipNav {
-    pub max_speed: f32,
-    pub max_accel: f32,
-    pub max_turn: f32,
-}
+// We use MovementProfile from navigation module now
 
 #[derive(Component)]
 pub struct ShipGrid {
@@ -91,6 +90,17 @@ impl ShipGrid {
                 };
 
                 if let Some(chunk_blueprint) = chunk_registry.blueprints.get(registry_key) {
+                    let default_part = crate::textures::components::SpritePart::default();
+                    let part = chunk_blueprint.parts.values().next().unwrap_or(&default_part);
+                    
+                    let mut atlas = None;
+                    if let (Some(layout), false) = (&chunk_blueprint.atlas_layout, part.frame_indices.is_empty()) {
+                        atlas = Some(TextureAtlas {
+                            layout: layout.clone(),
+                            index: part.frame_indices[0],
+                        });
+                    }
+
                     let chunk_entity = commands.spawn((
                         // 1. Gameplay logic component
                         Cell::from_registry(cell_type, cell_registry),
@@ -98,18 +108,28 @@ impl ShipGrid {
                         // 2. Voxel metadata and logical state
                         CellPos { x: x as i16, y: y as i16, },
                         VoxelChunk::new(orientation),
-                        VoxelChunkGrid::new(chunk_blueprint.voxel_data.clone()),
+                        {
+                            let cell = Cell::from_registry(cell_type, cell_registry);
+                            let chunk_health: Vec<f32> = chunk_blueprint.voxel_data.iter().map(|&v| {
+                                if v == 1 { cell.health } else { 0.0 }
+                            }).collect();
+                            VoxelChunkGrid::new(chunk_health, chunk_blueprint.width, chunk_blueprint.height)
+                        },
                         
+                        CollisionLayers::new(
+                            [crate::physics::GameLayer::Ship],
+                            [
+                                crate::physics::GameLayer::Ship,
+                                crate::physics::GameLayer::Projectile,
+                                crate::physics::GameLayer::Default
+                            ]
+                        ),
+
                         // 3. Visual components
                         Sprite {
                             image: chunk_blueprint.texture.clone(),
                             custom_size: Some(Vec2::new(chunk_size, chunk_size)),
-                            texture_atlas: chunk_blueprint.atlas_layout.as_ref().map(|layout| {
-                                TextureAtlas {
-                                    layout: layout.clone(),
-                                    index: 0,
-                                }
-                            }),
+                            texture_atlas: atlas,
                             ..default()
                         },
                         // Apply position offset AND visual rotation simultaneously
@@ -120,14 +140,13 @@ impl ShipGrid {
                         ).with_rotation(Quat::from_rotation_z(visual_rotation)),
                     )).id();
                     
-                    if let Some(durations) = &chunk_blueprint.frame_durations {
-                        if !durations.is_empty() {
-                            commands.entity(chunk_entity).insert(crate::textures::components::AnimationState {
-                                timer: Timer::new(std::time::Duration::from_millis(durations[0] as u64), TimerMode::Once),
-                                current_frame: 0,
-                                frame_durations: durations.clone(),
-                            });
-                        }
+                    if !part.frame_durations.is_empty() {
+                        commands.entity(chunk_entity).insert(crate::textures::components::AnimationState {
+                            timer: Timer::new(std::time::Duration::from_millis(part.frame_durations[0] as u64), TimerMode::Once),
+                            current_index: 0,
+                            frame_indices: part.frame_indices.clone(),
+                            frame_durations: part.frame_durations.clone(),
+                        });
                     }
 
                     commands.entity(parent_ship).add_child(chunk_entity);
@@ -147,6 +166,16 @@ impl ShipGrid {
                                 shield_thickness: 3,
                             })); },
                         "-" => { commands.entity(chunk_entity).insert(MinusCell); },
+                        "T" => { commands.entity(chunk_entity).insert(crate::weapons::components::weapon::TurretBase {
+                            weapon_type: "plasma".to_string(),
+                            damage: 10.0,
+                            max_range: 600.0,
+                            firing_arc: std::f32::consts::PI * 2.0,
+                            turn_speed: 5.0,
+                            projectile_speed: 400.0,
+                            fire_rate: 2.0,
+                            barrel_entity: None,
+                        }); },
                         _ => {}
                     }
                     
@@ -166,7 +195,7 @@ impl ShipGrid {
 #[derive(Bundle)]
 pub struct ShipBundle {
     pub ship_tag: Ship,
-    pub nav: ShipNav,
+    pub nav: crate::navigation::MovementProfile,
     pub transform: Transform,
     pub visibility: Visibility,
 
@@ -174,4 +203,6 @@ pub struct ShipBundle {
     pub rigid_body: RigidBody,
     pub linear_velocity: LinearVelocity,
     pub angular_velocity: AngularVelocity,
+    pub targeting: crate::weapons::components::ShipTargetingComputer,
+    pub targetable: crate::controls::components::Targetable,
 }

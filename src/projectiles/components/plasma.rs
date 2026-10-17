@@ -9,6 +9,7 @@ pub struct PlasmaProjectileStats {
     pub damage: i32,
     pub energy: i32,
     pub energy_loss_rate: i32,
+    pub source_ship: Option<Entity>,
 }
 
 #[derive(Bundle)]
@@ -22,6 +23,8 @@ pub struct PlasmaProjectileBundle {
 
     pub rigid_body: RigidBody,
     pub collider: Collider,
+    pub collision_layers: CollisionLayers,
     pub sensor: Sensor,
     pub velocity: LinearVelocity,
+    pub colliding_entities: CollidingEntities,
 }

@@ -1,3 +1,2 @@
-mod move_to_plugin;
-
-pub use move_to_plugin::*;
+pub mod navigation_plugin;
+pub use navigation_plugin::*;

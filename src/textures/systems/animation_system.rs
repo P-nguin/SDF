@@ -13,13 +13,15 @@ pub fn animate_sprites_system(
                 continue;
             }
             
-            state.current_frame = (state.current_frame + 1) % state.frame_durations.len();
+            state.current_index = (state.current_index + 1) % state.frame_durations.len();
             
             if let Some(atlas) = &mut sprite.texture_atlas {
-                atlas.index = state.current_frame;
+                if state.current_index < state.frame_indices.len() {
+                    atlas.index = state.frame_indices[state.current_index];
+                }
             }
             
-            let next_duration_ms = state.frame_durations[state.current_frame];
+            let next_duration_ms = state.frame_durations[state.current_index];
             state.timer.set_duration(std::time::Duration::from_millis(next_duration_ms as u64));
             state.timer.reset(); 
         }

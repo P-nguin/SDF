@@ -24,11 +24,41 @@ pub struct Turret {
     pub projectile_speed: f32,
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, Default, Clone)]
+pub struct ShipTargetingComputer {
+    pub primary_target: Option<Entity>,
+    pub secondary_targets: Vec<Entity>,
+}
+
+impl ShipTargetingComputer {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn set_primary(&mut self, target: Option<Entity>) {
+        self.primary_target = target;
+    }
+
+    pub fn add_secondary(&mut self, target: Entity) {
+        if !self.secondary_targets.contains(&target) {
+            self.secondary_targets.push(target);
+        }
+    }
+
+    pub fn remove_target(&mut self, target: Entity) {
+        if self.primary_target == Some(target) {
+            self.primary_target = None;
+        }
+        self.secondary_targets.retain(|&e| e != target);
+    }
+}
+
+#[derive(Component, Clone)]
 pub struct TargetControl {
     pub current_target: Option<Entity>,
     pub current_aim_angle: f32,
     pub is_locked_on: bool,
+    pub predicted_lead_pos: Option<Vec2>,
 }
 impl TargetControl {
     pub fn new() -> Self {
@@ -36,6 +66,7 @@ impl TargetControl {
             current_target: None,
             current_aim_angle: 0.0,
             is_locked_on: false,
+            predicted_lead_pos: None,
         }
     }
 }

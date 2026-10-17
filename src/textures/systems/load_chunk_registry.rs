@@ -1,64 +1,80 @@
 use bevy::prelude::*;
-use std::fs;
-use std::path::Path;
-use image::GenericImageView;
-
+use bevy::asset::{LoadedFolder, LoadState};
 use crate::textures::components::*;
+use crate::AppState;
 
-pub fn compile_chunk_folder_system(
+#[derive(Resource, Default)]
+pub struct ChunkAssetsLoading(pub Handle<LoadedFolder>);
+
+pub fn load_chunk_folder_system(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    let mut registry = ChunkRegistry::default();
-    
-    let folder_path = Path::new("assets/textures/chunks");
-    compile_directory(folder_path, &asset_server, &mut texture_atlases, &mut registry);
-
-    commands.insert_resource(registry);
+    let folder_handle = asset_server.load_folder("textures/chunks");
+    commands.insert_resource(ChunkAssetsLoading(folder_handle));
 }
 
-fn compile_directory(
-    dir: &Path, 
-    asset_server: &Res<AssetServer>, 
-    texture_atlases: &mut ResMut<Assets<TextureAtlasLayout>>,
-    registry: &mut ChunkRegistry) {
-    let Ok(entries) = fs::read_dir(dir) else {
-        warn!("Could not read directory: {:?}", dir);
-        return;
-    };
+pub fn check_assets_ready_system(
+    mut next_state: ResMut<NextState<AppState>>,
+    loading: Res<ChunkAssetsLoading>,
+    asset_server: Res<AssetServer>,
+) {
+    if asset_server.is_loaded_with_dependencies(&loading.0) {
+        next_state.set(AppState::InGame);
+    }
+}
 
-    for entry in entries.flatten() {
-        let path = entry.path();
-
-        if path.is_dir() {
-            compile_directory(&path, asset_server, texture_atlases, registry);
-        } else if path.extension().and_then(|s| s.to_str()) == Some("png") {
-            let voxel_data = generate_voxel_array_from_image(path.to_str().unwrap());
-
-            let bevy_path = path.strip_prefix("assets").unwrap_or(&path);
-            let texture_handle = asset_server.load(bevy_path.to_path_buf());
-
-            let mut json_path = path.with_extension("json");
-            if !json_path.exists() {
-                json_path = path.with_file_name("data.json");
+pub fn process_loaded_chunks_system(
+    mut chunk_registry: ResMut<ChunkRegistry>,
+    loaded_folders: Res<Assets<LoadedFolder>>,
+    loading: Res<ChunkAssetsLoading>,
+    images: Res<Assets<Image>>,
+    sprite_sheets: Res<Assets<SpriteSheetAsset>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    let Some(folder) = loaded_folders.get(&loading.0) else { return; };
+    
+    let mut json_map = std::collections::HashMap::new();
+    for handle in folder.handles.iter() {
+        if let Some(path) = handle.path() {
+            if path.path().extension().unwrap_or_default() == "json" {
+                if let Some(stem) = path.path().file_stem().and_then(|s| s.to_str()) {
+                    json_map.insert(stem.to_string(), handle.clone().typed::<SpriteSheetAsset>());
+                }
             }
-            
-            let mut atlas_layout = None;
-            let mut frame_durations = None;
+        }
+    }
 
-            if json_path.exists() {
-                if let Ok(json_str) = fs::read_to_string(&json_path) {
-                    if let Ok(sheet_data) = serde_json::from_str::<SpriteSheetData>(&json_str) {
+    for handle in folder.handles.iter() {
+        if let Some(path) = handle.path() {
+            if path.path().extension().unwrap_or_default() == "png" {
+                let Some(stem) = path.path().file_stem().and_then(|s| s.to_str()) else { continue; };
+                
+                let image_handle = handle.clone().typed::<Image>();
+                let Some(image) = images.get(&image_handle) else { continue; };
+
+                let mut atlas_layout = None;
+                let mut parts = std::collections::HashMap::new();
+                let mut first_frame_rect = None;
+
+                if let Some(json_handle) = json_map.get(stem) {
+                    if let Some(sheet_asset) = sprite_sheets.get(json_handle) {
+                        let sheet_data = &sheet_asset.data;
                         
-                        // create a new empty layout matching the image's full size
                         let mut layout = TextureAtlasLayout::new_empty(UVec2::new(
                             sheet_data.meta.size.w,
                             sheet_data.meta.size.h
                         ));
                         
-                        let mut durations = Vec::new();
-                        for frame_data in &sheet_data.frames {
+                        for (i, frame_data) in sheet_data.frames.iter().enumerate() {
+                            if i == 0 {
+                                first_frame_rect = Some((
+                                    frame_data.frame.x,
+                                    frame_data.frame.y,
+                                    frame_data.frame.w,
+                                    frame_data.frame.h,
+                                ));
+                            }
                             let rect = URect::new(
                                 frame_data.frame.x,
                                 frame_data.frame.y,
@@ -66,43 +82,86 @@ fn compile_directory(
                                 frame_data.frame.y + frame_data.frame.h,
                             );
                             layout.add_texture(rect);
-                            durations.push(frame_data.duration);
+                            
+                            let part_name = if let Some(ref filename) = frame_data.filename {
+                                let mut name = filename.clone();
+                                while name.ends_with(|c: char| c.is_digit(10) || c.is_whitespace()) {
+                                    name.pop();
+                                }
+                                if name.is_empty() {
+                                    "default".to_string()
+                                } else {
+                                    name
+                                }
+                            } else {
+                                "default".to_string()
+                            };
+                            
+                            let part = parts.entry(part_name).or_insert(SpritePart::default());
+                            part.frame_indices.push(i);
+                            part.frame_durations.push(frame_data.duration);
                         }
                         
                         atlas_layout = Some(texture_atlases.add(layout));
-                        frame_durations = Some(durations);
                     }
                 }
-            }
+                
+                let (voxel_data, width, height) = generate_voxel_array_from_bevy_image(image, first_frame_rect);
 
-            if let Some(file_name) = path.file_stem().and_then(|n| n.to_str()) {
-                registry.blueprints.insert(
-                    file_name.to_string(),
+                chunk_registry.blueprints.insert(
+                    stem.to_string(),
                     ChunkBlueprint {
                         voxel_data,
-                        texture: texture_handle,
+                        width,
+                        height,
+                        texture: image_handle,
                         atlas_layout,
-                        frame_durations,
+                        parts,
                     },
                 );
-                info!("Compiled chunk blueprint: {}", file_name);
+                info!("Compiled chunk blueprint: {}", stem);
             }
         }
     }
 }
 
-fn generate_voxel_array_from_image(filepath: &str) -> Vec<i8> {
-    let img = image::open(filepath).expect("Failed to open image file");
-    let mut voxel_array = Vec::with_capacity((img.width() * img.height()) as usize);
+fn generate_voxel_array_from_bevy_image(img: &Image, crop_rect: Option<(u32, u32, u32, u32)>) -> (Vec<i8>, usize, usize) {
+    let img_width = img.texture_descriptor.size.width as usize;
+    let img_height = img.texture_descriptor.size.height as usize;
     
-    for (_x, _y, _pixel) in img.pixels() {
-        voxel_array.push(0); // always push 0 for now, even if there is visual nothing treat it as something
-        // if pixel[3] == 0 {
-        //     voxel_array.push(0);
-        // } else {
-        //     voxel_array.push(1);
-        // }
+    let (cx, cy, cw, ch) = if let Some((x, y, w, h)) = crop_rect {
+        (x as usize, y as usize, w as usize, h as usize)
+    } else {
+        (0, 0, img_width, img_height)
+    };
+    
+    let mut voxel_array = Vec::with_capacity(cw * ch);
+
+    if let Some(data) = img.data.as_ref() {
+        let bytes_per_pixel = data.len() / (img_width * img_height).max(1);
+        
+        for y in cy..(cy + ch) {
+            for x in cx..(cx + cw) {
+                let img_idx = y * img_width + x;
+                let byte_idx = img_idx * bytes_per_pixel;
+                
+                if byte_idx + 3 < data.len() {
+                    let alpha = data[byte_idx + 3];
+                    if alpha == 0 {
+                        voxel_array.push(0);
+                    } else {
+                        voxel_array.push(1);
+                    }
+                } else {
+                    voxel_array.push(0);
+                }
+            }
+        }
+    } else {
+        for _ in 0..(cw * ch) {
+            voxel_array.push(0);
+        }
     }
     
-    voxel_array
+    (voxel_array, cw, ch)
 }

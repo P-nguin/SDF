@@ -62,5 +62,16 @@ pub fn load_cell_registry(
         100.0,
     ));
 
+    registry.cells.insert("T".to_string(), Cell::new(
+        "T".to_string(),
+        100.0,
+        100.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    ));
+
     commands.insert_resource(registry);
 }

@@ -7,6 +7,7 @@ impl Plugin for WeaponPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, (
             turret_builder_system,
+            turret_target_acquisition_system,
             target_control_system,
             fire_control_system,
         ).chain());

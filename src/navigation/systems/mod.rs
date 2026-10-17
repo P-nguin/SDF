@@ -1,3 +1,4 @@
-mod move_to_system;
-
-pub use move_to_system::*;
+pub mod thruster_execution_system;
+pub mod debug_navigation;
+pub use thruster_execution_system::*;
+pub use debug_navigation::*;
